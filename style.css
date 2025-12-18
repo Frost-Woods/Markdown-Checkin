@@ -1,12 +1,35 @@
+/* ================= 浅色主题变量 ================= */
+:root {
+--bg-color: #ffffff;
+--text-color: #000000;
+--header-bg: #2c3e50;
+--toolbar-bg: #ecf0f1;
+--border-color: #ccc;
+}
+
+
+/* ================= 深色主题变量 ================= */
+[data-theme="dark"] {
+--bg-color: #1e1e1e;
+--text-color: #dcdcdc;
+--header-bg: #111111;
+--toolbar-bg: #252526;
+--border-color: #333333;
+}
+
+
+/* ================= 页面基础 ================= */
 body {
 margin: 0;
 font-family: Arial, sans-serif;
+background-color: var(--bg-color);
+color: var(--text-color);
 }
 
 
 header {
-background: #2c3e50;
-color: white;
+background: var(--header-bg);
+color: #ffffff;
 padding: 10px;
 text-align: center;
 }
@@ -14,7 +37,9 @@ text-align: center;
 
 .toolbar {
 padding: 10px;
-background: #ecf0f1;
+background: var(--toolbar-bg);
+display: flex;
+gap: 10px;
 }
 
 
@@ -26,16 +51,33 @@ height: calc(100vh - 120px);
 
 #editor {
 width: 50%;
-padding: 10px;
+padding: 12px;
 font-size: 14px;
 border: none;
 outline: none;
+resize: none;
+background-color: var(--bg-color);
+color: var(--text-color);
 }
 
 
 #preview {
 width: 50%;
-padding: 10px;
+padding: 12px;
 overflow-y: auto;
-border-left: 1px solid #ccc;
+border-left: 1px solid var(--border-color);
+}
+
+
+/* ================= Markdown 代码块 ================= */
+pre {
+padding: 12px;
+border-radius: 8px;
+overflow-x: auto;
+}
+
+
+code {
+font-family: Consolas, Monaco, monospace;
+font-size: 13px;
 }
