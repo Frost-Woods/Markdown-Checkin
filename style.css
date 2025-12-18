@@ -1,0 +1,41 @@
+body {
+margin: 0;
+font-family: Arial, sans-serif;
+}
+
+
+header {
+background: #2c3e50;
+color: white;
+padding: 10px;
+text-align: center;
+}
+
+
+.toolbar {
+padding: 10px;
+background: #ecf0f1;
+}
+
+
+.container {
+display: flex;
+height: calc(100vh - 120px);
+}
+
+
+#editor {
+width: 50%;
+padding: 10px;
+font-size: 14px;
+border: none;
+outline: none;
+}
+
+
+#preview {
+width: 50%;
+padding: 10px;
+overflow-y: auto;
+border-left: 1px solid #ccc;
+}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Markdown Web Editor</title>
+<link rel="stylesheet" href="style.css">
+
+
+<!-- Markdown 解析库 -->
+<script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+</head>
+<body>
+<header>
+<h1>Markdown 编辑 / 预览平台</h1>
+</header>
+
+
+<div class="toolbar">
+<input type="file" id="fileInput" accept=".md">
+<button id="exportBtn">导出 HTML</button>
+</div>
+
+
+<div class="container">
+<textarea id="editor" placeholder="在这里编写 Markdown..."></textarea>
+<div id="preview"></div>
+</div>
+
+
+<script src="script.js"></script>
+</body>
+</html>
