@@ -3,30 +3,61 @@
 <head>
 <meta charset="UTF-8">
 <title>Markdown Web Editor</title>
+
+
+<!-- ================= 页面样式 ================= -->
 <link rel="stylesheet" href="style.css">
 
 
-<!-- Markdown 解析库 -->
+<!-- ================= Markdown 解析 ================= -->
 <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+
+
+<!-- ================= 代码高亮 ================= -->
+<!-- 浅色代码主题 -->
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/highlight.js/styles/github.min.css">
+
+
+<!-- 深色代码主题（系统深色） -->
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/highlight.js/styles/github-dark.min.css"
+media="(prefers-color-scheme: dark)">
+
+
+<script src="https://cdn.jsdelivr.net/npm/highlight.js/lib/highlight.min.js"></script>
+
+
+<!-- ================= PDF 导出 ================= -->
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 </head>
 <body>
+
+
+<!-- ================= 标题 ================= -->
 <header>
-<h1>Markdown 编辑 / 预览平台</h1>
+<h1>91 / 糖心 / 麻豆 平台</h1>
 </header>
 
 
+<!-- ================= 工具栏 ================= -->
 <div class="toolbar">
 <input type="file" id="fileInput" accept=".md">
 <button id="exportBtn">导出 HTML</button>
+<button id="exportPdfBtn">导出 PDF</button>
+<button id="soundToggle">🔊 音效开</button>
+<button id="themeToggle">🌙 深色模式</button>
 </div>
 
 
+<!-- ================= 主体 ================= -->
 <div class="container">
 <textarea id="editor" placeholder="在这里编写 Markdown..."></textarea>
 <div id="preview"></div>
 </div>
 
 
+<!-- ================= 逻辑 ================= -->
 <script src="script.js"></script>
 </body>
 </html>
