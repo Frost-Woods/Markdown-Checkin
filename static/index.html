@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown打卡平台（GitHub直连版）</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.css">
+    <style>
+        body { padding: 20px; }
+        .file-item { cursor: pointer; padding: 8px; border: 1px solid #eee; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .file-item:hover { background-color: #f5f5f5; }
+        .delete-btn { padding: 2px 8px; font-size: 12px; }
+        #preview { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; min-height: 400px; background-color: #f8f9fa; }
+        #preview h1, #preview h2, #preview h3 { border-bottom: 1px solid #eee; padding-bottom: 0.5rem; margin-top: 1rem; }
+        #preview code { background-color: #eee; padding: 2px 4px; border-radius: 4px; }
+        #preview pre { background-color: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+        #preview img { max-width: 100%; height: auto; }
+    </style>
+    <!-- 音效：替换为仓库static文件夹中的本地文件 -->
+    <audio id="error-audio" preload="auto">
+        <source src="./static/error.mp3" type="audio/mpeg">
+        <!-- 兜底：若本地文件加载失败，仍使用在线CDN -->
+        <source src="https://cdn.jsdelivr.net/gh/fawazahmed0/simple-api@main/audio/you-gan-ma-ai-yo.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="success-audio" preload="auto">
+        <source src="./static/success.mp3" type="audio/mpeg">
+        <!-- 兜底：若本地文件加载失败，仍使用在线CDN -->
+        <source src="https://cdn.jsdelivr.net/gh/fawazahmed0/simple-api@main/audio/wa-zhen-de-shi-ni-ya.mp3" type="audio/mpeg">
+    </audio>
+</head>
+<body>
+    <div class="container">
+        <h1>Markdown打卡平台</h1>
+
+        <!-- 配置区（首次使用需填写） -->
+        <div class="alert alert-info mt-4">
+            <h5>首次使用请配置</h5>
+            <div class="mb-2">
+                <label>GitHub用户名：</label>
+                <input type="text" id="github-user" class="form-control w-50 mt-1" placeholder="如：Frost-Woods" value="你的用户名">
+            </div>
+            <div class="mb-2">
+                <label>仓库名：</label>
+                <input type="text" id="github-repo" class="form-control w-50 mt-1" placeholder="如：Markdown-Checkin" value="你的仓库名">
+            </div>
+            <div class="mb-2">
+                <label>GitHub PAT（repo权限）：</label>
+                <input type="password" id="github-token" class="form-control w-50 mt-1" placeholder="ghp_xxxx" value="你的PAT">
+            </div>
+            <div class="mb-2">
+                <label>分支名：</label>
+                <input type="text" id="github-branch" class="form-control w-50 mt-1" placeholder="main" value="main">
+            </div>
+        </div>
+
+        <!-- 上传区 -->
+        <div class="upload-area mt-4">
+            <h4>上传打卡文件</h4>
+            <input type="file" id="file-upload" accept=".md" class="form-control mt-2">
+            <button id="upload-btn" class="btn btn-primary mt-2">上传文件</button>
+            <div id="upload-status" class="mt-2 text-success"></div>
+        </div>
+
+        <!-- 文件列表 -->
+        <div class="file-list-area mt-4">
+            <h4>已上传的打卡文件</h4>
+            <div id="file-list" class="file-list"></div>
+        </div>
+
+        <!-- 编辑+预览 -->
+        <div class="editor-container mt-4">
+            <h4>编辑打卡内容</h4>
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <textarea id="editor"></textarea>
+                    <div class="mt-3">
+                        <button id="save-btn" class="btn btn-success">保存修改</button>
+                        <button id="export-btn" class="btn btn-info export-btn" disabled>导出文件</button>
+                        <div id="save-status" class="mt-2 text-success"></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="mb-2">实时预览</h5>
+                    <div id="preview" class="border p-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.0/marked.min.js"></script>
+
+    <script>
+        // 初始化编辑器
+        const simplemde = new SimpleMDE({
+            element: document.getElementById("editor"),
+            autofocus: false,
+            spellChecker: false,
+            toolbar: ["bold", "italic", "heading", "|", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "fullscreen"]
+        });
+
+        // 实时预览
+        simplemde.codemirror.on("change", function() {
+            const content = simplemde.value();
+            document.getElementById("preview").innerHTML = marked.parse(content) || "<p class='text-muted'>编辑Markdown内容，这里实时预览～</p>";
+        });
+
+        // 全局变量
+        let currentFile = { name: "", sha: "" };
+        let GITHUB_CONFIG = {
+            user: "",
+            repo: "",
+            token: "",
+            branch: ""
+        };
+
+        // 读取配置
+        function getConfig() {
+            GITHUB_CONFIG = {
+                user: $("#github-user").val().trim(),
+                repo: $("#github-repo").val().trim(),
+                token: $("#github-token").val().trim(),
+                branch: $("#github-branch").val().trim() || "main"
+            };
+            if (!GITHUB_CONFIG.user || !GITHUB_CONFIG.repo || !GITHUB_CONFIG.token) {
+                alert("请先填写完整的GitHub配置！");
+                return false;
+            }
+            return true;
+        }
+
+        // 请求头
+        function getHeaders() {
+            return {
+                "Authorization": `token ${GITHUB_CONFIG.token}`,
+                "Accept": "application/vnd.github.v3+json",
+                "Content-Type": "application/json"
+            };
+        }
+
+        // 播放音效
+        function playAudio(audioId) {
+            const audio = document.getElementById(audioId);
+            audio.pause();
+            audio.currentTime = 0;
+            audio.play().catch(() => {
+                alert(audioId === "error-audio" ? "你干嘛哎哟！只能上传.md文件～" : "哇真的是你呀！格式正确～");
+            });
+        }
+
+        // 加载文件列表
+        function loadFileList() {
+            if (!getConfig()) return;
+
+            const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/?ref=${GITHUB_CONFIG.branch}`;
+            $("#file-list").html("<div class='text-muted'>加载中...</div>");
+
+            $.get({
+                url: apiUrl,
+                headers: getHeaders(),
+                success: function(data) {
+                    const fileList = $("#file-list");
+                    fileList.empty();
+                    const mdFiles = data.filter(item => item.type === "file" && item.name.endsWith(".md"));
+
+                    if (mdFiles.length === 0) {
+                        fileList.html("<div class='text-muted'>暂无.md文件</div>");
+                        return;
+                    }
+
+                    // 获取每个文件的最后提交时间
+                    mdFiles.forEach(file => {
+                        // 获取提交时间
+                        const commitUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/commits?path=${encodeURIComponent(file.name)}&per_page=1&ref=${GITHUB_CONFIG.branch}`;
+                        $.get({
+                            url: commitUrl,
+                            headers: getHeaders(),
+                            success: function(commits) {
+                                const updateTime = commits.length > 0 ? new Date(commits[0].commit.committer.date).toLocaleString() : "未知时间";
+                                const fileItem = $(`<div class='file-item'>
+                                    <div>${file.name} <small class='text-muted'>(${updateTime})</small></div>
+                                    <button class='btn btn-danger btn-sm delete-btn' data-filename='${file.name}' data-sha='${file.sha}'>删除</button>
+                                </div>`);
+
+                                // 加载文件内容
+                                fileItem.find("div:first").click(function() {
+                                    const filename = $(this).parent().find(".delete-btn").data("filename");
+                                    loadFileContent(filename);
+                                });
+
+                                // 删除文件
+                                fileItem.find(".delete-btn").click(function(e) {
+                                    e.stopPropagation();
+                                    const filename = $(this).data("filename");
+                                    const sha = $(this).data("sha");
+                                    if (confirm(`确定删除 ${filename} 吗？无法恢复！`)) {
+                                        deleteFile(filename, sha);
+                                    }
+                                });
+
+                                fileList.append(fileItem);
+                            }
+                        });
+                    });
+                },
+                error: function(err) {
+                    $("#file-list").html(`<div class='text-danger'>加载失败：${err.responseJSON?.message || "未知错误"}</div>`);
+                }
+            });
+        }
+
+        // 加载文件内容
+        function loadFileContent(filename) {
+            if (!getConfig()) return;
+
+            const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/${encodeURIComponent(filename)}?ref=${GITHUB_CONFIG.branch}`;
+            $.get({
+                url: apiUrl,
+                headers: getHeaders(),
+                success: function(data) {
+                    // 解码base64内容
+                    const content = atob(data.content.replace(/\n/g, ""));
+                    simplemde.value(content);
+                    currentFile = { name: filename, sha: data.sha };
+                    $("#export-btn").prop("disabled", false);
+                    $("#save-status").text("");
+                },
+                error: function(err) {
+                    alert(`加载失败：${err.responseJSON?.message}`);
+                }
+            });
+        }
+
+        // 上传文件
+        $("#upload-btn").click(function() {
+            const fileInput = $("#file-upload")[0];
+            if (!fileInput.files.length) {
+                alert("请选择文件！");
+                return;
+            }
+            if (!getConfig()) return;
+
+            const file = fileInput.files[0];
+            if (!file.name.endsWith(".md")) {
+                playAudio("error-audio");
+                $("#upload-status").text("只能上传.md文件！").removeClass("text-success").addClass("text-danger");
+                return;
+            }
+
+            playAudio("success-audio");
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = btoa(e.target.result); // 编码为base64
+                const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/${encodeURIComponent(file.name)}?ref=${GITHUB_CONFIG.branch}`;
+                $("#upload-status").text("上传中...").removeClass("text-danger").addClass("text-success");
+
+                $.ajax({
+                    url: apiUrl,
+                    type: "PUT",
+                    headers: getHeaders(),
+                    data: JSON.stringify({
+                        message: `Upload ${file.name} - ${new Date().toLocaleString()}`,
+                        content: content,
+                        branch: GITHUB_CONFIG.branch
+                    }),
+                    success: function() {
+                        $("#upload-status").text("上传成功！");
+                        loadFileList();
+                        fileInput.value = "";
+                        setTimeout(() => $("#upload-status").text(""), 3000);
+                    },
+                    error: function(err) {
+                        $("#upload-status").text(`失败：${err.responseJSON?.message}`).removeClass("text-success").addClass("text-danger");
+                    }
+                });
+            };
+            reader.readAsText(file);
+        });
+
+        // 保存文件
+        $("#save-btn").click(function() {
+            if (!currentFile.name) {
+                alert("请先选择文件！");
+                return;
+            }
+            if (!getConfig()) return;
+
+            const content = simplemde.value();
+            const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/${encodeURIComponent(currentFile.name)}?ref=${GITHUB_CONFIG.branch}`;
+            $("#save-status").text("保存中...");
+
+            // 先获取最新sha（防止冲突）
+            $.get({
+                url: apiUrl,
+                headers: getHeaders(),
+                success: function(fileData) {
+                    $.ajax({
+                        url: apiUrl,
+                        type: "PUT",
+                        headers: getHeaders(),
+                        data: JSON.stringify({
+                            message: `Update ${currentFile.name} - ${new Date().toLocaleString()}`,
+                            content: btoa(unescape(encodeURIComponent(content))), // 处理中文
+                            sha: fileData.sha,
+                            branch: GITHUB_CONFIG.branch
+                        }),
+                        success: function() {
+                            $("#save-status").text("保存成功！");
+                            loadFileList();
+                            setTimeout(() => $("#save-status").text(""), 3000);
+                        },
+                        error: function(err) {
+                            if (err.status === 409) {
+                                $("#save-status").text("版本冲突！请重新加载文件～").addClass("text-danger");
+                            } else {
+                                $("#save-status").text(`失败：${err.responseJSON?.message}`).addClass("text-danger");
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        // 删除文件
+        function deleteFile(filename, sha) {
+            if (!getConfig()) return;
+
+            const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/${encodeURIComponent(filename)}?ref=${GITHUB_CONFIG.branch}`;
+            $.ajax({
+                url: apiUrl,
+                type: "DELETE",
+                headers: getHeaders(),
+                data: JSON.stringify({
+                    message: `Delete ${filename} - ${new Date().toLocaleString()}`,
+                    sha: sha,
+                    branch: GITHUB_CONFIG.branch
+                }),
+                success: function() {
+                    alert(`删除 ${filename} 成功！`);
+                    loadFileList();
+                    if (currentFile.name === filename) {
+                        simplemde.value("");
+                        currentFile = { name: "", sha: "" };
+                        $("#export-btn").prop("disabled", true);
+                    }
+                },
+                error: function(err) {
+                    alert(`删除失败：${err.responseJSON?.message}`);
+                }
+            });
+        }
+
+        // 导出文件
+        $("#export-btn").click(function() {
+            if (!currentFile.name) {
+                alert("请先选择文件！");
+                return;
+            }
+            const content = simplemde.value();
+            const blob = new Blob([content], { type: "text/markdown" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = currentFile.name;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // 页面加载初始化
+        $(document).ready(function() {
+            loadFileList();
+            document.getElementById("preview").innerHTML = "<p class='text-muted'>编辑Markdown内容，这里实时预览～</p>";
+
+            // 配置修改后重新加载
+            $("#github-user, #github-repo, #github-token, #github-branch").change(loadFileList);
+        });
+    </script>
+</body>
+</html>
