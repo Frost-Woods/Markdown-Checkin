@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
     <style>
-        /* 基础布局（修复暗色模式全屏渲染） */
+        /* 基础布局 */
         html, body { 
             padding: 0;
             margin: 0;
@@ -21,7 +21,7 @@
             width: 100%;
         }
 
-        /* 侧边栏样式（修复展开/收起 + 图标优化） */
+        /* 侧边栏样式 */
         .sidebar {
             width: 300px;
             background-color: #f8f9fa;
@@ -31,14 +31,13 @@
             position: relative;
             min-height: 100vh;
             z-index: 10;
+            color: #333;
         }
-        /* 侧边栏收起状态 */
         .sidebar.collapsed {
             width: 60px;
             padding: 0;
             overflow: hidden;
         }
-        /* 侧边栏切换按钮（三条纹图标） */
         .sidebar-toggle {
             position: absolute;
             right: 15px;
@@ -53,15 +52,6 @@
             color: #333;
             transition: color 0.3s;
         }
-        /* 暗色模式下按钮颜色 */
-        .dark-mode .sidebar-toggle {
-            color: #e0e0e0;
-        }
-        /* 收起时按钮位置调整 */
-        .sidebar.collapsed .sidebar-toggle {
-            right: 15px;
-        }
-        /* 三条纹图标样式 */
         .sidebar-toggle .hamburger {
             display: block;
             width: 20px;
@@ -84,12 +74,11 @@
         .sidebar-toggle .hamburger::after {
             top: 6px;
         }
-        /* 收起时按钮旋转 */
         .sidebar.collapsed .sidebar-toggle .hamburger {
             transform: rotate(90deg);
         }
 
-        /* 主内容区（修复暗色模式背景） */
+        /* 主内容区 */
         .main-content {
             flex: 1;
             padding: 20px;
@@ -108,7 +97,7 @@
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            transition: background-color 0.3s;
+            transition: background-color 0.3s, border-color 0.3s;
         }
         .file-item:hover { 
             background-color: #f5f5f5; 
@@ -125,12 +114,14 @@
             min-height: 400px; 
             padding: 1rem;
             border-radius: 4px;
-            transition: background-color 0.3s, color 0.3s;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+            border: 1px solid #eee;
         }
         #preview h1, #preview h2, #preview h3 { 
             border-bottom: 1px solid #eee; 
             padding-bottom: 0.5rem; 
             margin-top: 1rem; 
+            transition: border-color 0.3s;
         }
         #preview code { 
             padding: 2px 4px; 
@@ -163,6 +154,7 @@
             justify-content: center;
             z-index: 100;
         }
+
         /* 明亮模式样式 */
         .light-mode {
             background-color: #ffffff;
@@ -170,9 +162,15 @@
         }
         .light-mode .sidebar {
             background-color: #f8f9fa;
+            color: #333;
+        }
+        .light-mode .main-content {
+            background-color: #ffffff;
+            color: #333;
         }
         .light-mode .file-item {
             border-color: #eee;
+            color: #333;
         }
         .light-mode .file-item:hover {
             background-color: #f5f5f5;
@@ -180,6 +178,7 @@
         .light-mode #preview {
             background-color: #f8f9fa;
             color: #333;
+            border-color: #eee;
         }
         .light-mode #preview h1, .light-mode #preview h2, .light-mode #preview h3 {
             border-bottom-color: #eee;
@@ -197,34 +196,56 @@
             color: #333;
             border-color: #ddd;
         }
+        .light-mode #file-upload {
+            background-color: #ffffff;
+            color: #333;
+            border-color: #ddd;
+        }
         .light-mode .alert-info {
             background-color: #d1ecf1;
             color: #0c5460;
             border-color: #bee5eb;
         }
-        /* 暗色模式样式（修复全屏渲染） */
+        .light-mode .simplemde .CodeMirror {
+            background-color: #ffffff;
+            color: #333;
+            border-color: #ddd;
+        }
+        .light-mode .simplemde .CodeMirror-gutter {
+            background-color: #f8f9fa;
+            border-right-color: #ddd;
+        }
+
+        /* 暗色模式样式（核心修复） */
         .dark-mode {
             background-color: #1a1a1a;
-            color: #e0e0e0;
+            color: #e0e0e0; /* 全局文字转白色系 */
         }
         .dark-mode .sidebar {
             background-color: #2d2d2d;
+            color: #e0e0e0; /* 侧边栏文字转白 */
+        }
+        .dark-mode .sidebar-toggle {
+            color: #e0e0e0; /* 侧边栏图标转白 */
         }
         .dark-mode .main-content {
             background-color: #1a1a1a;
+            color: #e0e0e0; /* 主内容文字转白 */
         }
         .dark-mode .file-item {
-            border-color: #444;
+            border-color: #666; /* 边框转浅灰（替代黑色） */
+            color: #e0e0e0; /* 文件项文字转白 */
         }
         .dark-mode .file-item:hover {
             background-color: #3d3d3d;
         }
         .dark-mode #preview {
             background-color: #2d2d2d;
-            color: #e0e0e0;
+            color: #e0e0e0; /* 预览区文字转白 */
+            border-color: #666; /* 预览区边框转浅灰 */
         }
         .dark-mode #preview h1, .dark-mode #preview h2, .dark-mode #preview h3 {
-            border-bottom-color: #444;
+            border-bottom-color: #666; /* 标题边框转浅灰 */
         }
         .dark-mode #preview code {
             background-color: #444;
@@ -234,10 +255,29 @@
             background-color: #3d3d3d;
             color: #e0e0e0;
         }
+        /* 输入框（含普通input、编辑器）暗色样式 */
         .dark-mode input, .dark-mode textarea, .dark-mode .form-control {
             background-color: #3d3d3d;
+            color: #e0e0e0; /* 输入框文字转白 */
+            border-color: #666;
+        }
+        .dark-mode #file-upload {
+            background-color: #3d3d3d;
+            color: #e0e0e0; /* 文件上传框文字转白 */
+            border-color: #666;
+        }
+        /* SimpleMDE编辑器暗色样式 */
+        .dark-mode .simplemde .CodeMirror {
+            background-color: #3d3d3d;
+            color: #e0e0e0; /* 编辑器文字转白 */
+            border-color: #666;
+        }
+        .dark-mode .simplemde .CodeMirror-gutter {
+            background-color: #2d2d2d;
+            border-right-color: #666;
+        }
+        .dark-mode .simplemde .CodeMirror-lines {
             color: #e0e0e0;
-            border-color: #444;
         }
         .dark-mode .alert-info {
             background-color: #2d3b45;
@@ -618,7 +658,7 @@
             URL.revokeObjectURL(url);
         });
 
-        // 侧边栏切换（修复展开/收起逻辑）
+        // 侧边栏切换
         $("#sidebar-toggle").click(function() {
             const sidebar = $("#sidebar");
             if (sidebar.hasClass("collapsed")) {
@@ -628,18 +668,18 @@
             }
         });
 
-        // 明暗模式切换（修复全屏渲染）
+        // 明暗模式切换
         $("#theme-toggle").click(function() {
             const html = document.documentElement;
             const toggleBtn = $(this);
             if (html.classList.contains("light-mode")) {
                 html.classList.remove("light-mode");
                 html.classList.add("dark-mode");
-                toggleBtn.text("☀️");
+                toggleBtn.text("明亮模式");
             } else {
                 html.classList.remove("dark-mode");
                 html.classList.add("light-mode");
-                toggleBtn.text("🌙");
+                toggleBtn.text("暗色模式");
             }
         });
 
@@ -652,4 +692,3 @@
     </script>
 </body>
 </html>
-
