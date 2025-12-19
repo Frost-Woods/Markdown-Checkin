@@ -107,7 +107,7 @@
             font-size: 12px; 
         }
 
-        /* 预览区样式 */
+        /* 预览区样式 --- 【修改1：添加自动换行样式】 */
         #preview { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             line-height: 1.6; 
@@ -116,6 +116,9 @@
             border-radius: 4px;
             transition: background-color 0.3s, color 0.3s, border-color 0.3s;
             border: 1px solid #eee;
+            /* 新增自动换行配置 */
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         #preview h1, #preview h2, #preview h3 { 
             border-bottom: 1px solid #eee; 
@@ -402,7 +405,7 @@
             toolbar: ["bold", "italic", "heading", "|", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "fullscreen"]
         });
 
-        // 实时预览（集成代码高亮）
+        // 实时预览（集成代码高亮） --- 【修改2：添加breaks: true】
         simplemde.codemirror.on("change", function() {
             const content = simplemde.value();
             marked.setOptions({
@@ -411,7 +414,9 @@
                         return Prism.highlight(code, Prism.languages[lang], lang);
                     }
                     return code;
-                }
+                },
+                // 新增：让单个换行解析为<br>，实现实时换行
+                breaks: true
             });
             document.getElementById("preview").innerHTML = marked.parse(content) || "<p class='text-muted'>编辑Markdown内容，这里实时预览～</p>";
         });
