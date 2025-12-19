@@ -1,88 +1,239 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="light-mode">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Markdown打卡平台（GitHub直连版）</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.css">
+    <!-- 代码高亮样式（Prism） -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
     <style>
-        body { padding: 20px; }
-        .file-item { cursor: pointer; padding: 8px; border: 1px solid #eee; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .file-item:hover { background-color: #f5f5f5; }
-        .delete-btn { padding: 2px 8px; font-size: 12px; }
-        #preview { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; min-height: 400px; background-color: #f8f9fa; }
-        #preview h1, #preview h2, #preview h3 { border-bottom: 1px solid #eee; padding-bottom: 0.5rem; margin-top: 1rem; }
-        #preview code { background-color: #eee; padding: 2px 4px; border-radius: 4px; }
-        #preview pre { background-color: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto; }
-        #preview img { max-width: 100%; height: auto; }
+        /* 基础布局 */
+        body { 
+            padding: 0;
+            margin: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 300px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            transition: background-color 0.3s;
+            position: relative;
+        }
+        .sidebar-toggle {
+            position: absolute;
+            right: -20px;
+            top: 20px;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar.collapsed {
+            width: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        .sidebar.collapsed .sidebar-toggle {
+            right: 0;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* 文件项样式 */
+        .file-item { 
+            cursor: pointer; 
+            padding: 8px; 
+            border: 1px solid #eee; 
+            margin-bottom: 5px; 
+            border-radius: 4px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            transition: background-color 0.3s;
+        }
+        .file-item:hover { 
+            background-color: #f5f5f5; 
+        }
+        .delete-btn { 
+            padding: 2px 8px; 
+            font-size: 12px; 
+        }
+
+        /* 预览区样式 */
+        #preview { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            line-height: 1.6; 
+            min-height: 400px; 
+            padding: 1rem;
+            border-radius: 4px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        #preview h1, #preview h2, #preview h3 { 
+            border-bottom: 1px solid #eee; 
+            padding-bottom: 0.5rem; 
+            margin-top: 1rem; 
+        }
+        #preview code { 
+            padding: 2px 4px; 
+            border-radius: 4px;
+        }
+        #preview pre { 
+            padding: 1rem; 
+            border-radius: 4px; 
+            overflow-x: auto;
+        }
+        #preview img { 
+            max-width: 100%; 
+            height: auto; 
+        }
+
+        /* 明暗模式切换 */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .dark-mode {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .dark-mode .sidebar {
+            background-color: #2d2d2d;
+        }
+        .dark-mode .file-item {
+            border-color: #444;
+        }
+        .dark-mode .file-item:hover {
+            background-color: #3d3d3d;
+        }
+        .dark-mode #preview {
+            background-color: #2d2d2d;
+        }
+        .dark-mode #preview h1, .dark-mode #preview h2, .dark-mode #preview h3 {
+            border-bottom-color: #444;
+        }
+        .dark-mode #preview code {
+            background-color: #444;
+        }
+        .dark-mode #preview pre {
+            background-color: #3d3d3d;
+        }
+        .dark-mode input, .dark-mode textarea, .dark-mode .form-control {
+            background-color: #3d3d3d;
+            color: #e0e0e0;
+            border-color: #444;
+        }
+        .dark-mode .alert-info {
+            background-color: #2d3b45;
+            color: #e0e0e0;
+            border-color: #445a6b;
+        }
     </style>
-    <!-- 音效：替换为仓库static文件夹中的本地文件 -->
+    <!-- 音效 -->
     <audio id="error-audio" preload="auto">
         <source src="./static/error.mp3" type="audio/mpeg">
-        <!-- 兜底：若本地文件加载失败，仍使用在线CDN -->
         <source src="https://cdn.jsdelivr.net/gh/fawazahmed0/simple-api@main/audio/you-gan-ma-ai-yo.mp3" type="audio/mpeg">
     </audio>
     <audio id="success-audio" preload="auto">
         <source src="./static/success.mp3" type="audio/mpeg">
-        <!-- 兜底：若本地文件加载失败，仍使用在线CDN -->
         <source src="https://cdn.jsdelivr.net/gh/fawazahmed0/simple-api@main/audio/wa-zhen-de-shi-ni-ya.mp3" type="audio/mpeg">
     </audio>
 </head>
 <body>
-    <div class="container">
-        <h1>Markdown打卡平台</h1>
+    <!-- 主题切换按钮 -->
+    <button class="theme-toggle" id="theme-toggle">🌙</button>
 
-        <!-- 配置区（首次使用需填写） -->
-        <div class="alert alert-info mt-4">
-            <h5>首次使用请配置</h5>
-            <div class="mb-2">
-                <label>GitHub用户名：</label>
-                <input type="text" id="github-user" class="form-control w-50 mt-1" placeholder="如：Frost-Woods" value="你的用户名">
-            </div>
-            <div class="mb-2">
-                <label>仓库名：</label>
-                <input type="text" id="github-repo" class="form-control w-50 mt-1" placeholder="如：Markdown-Checkin" value="你的仓库名">
-            </div>
-            <div class="mb-2">
-                <label>GitHub PAT（repo权限）：</label>
-                <input type="password" id="github-token" class="form-control w-50 mt-1" placeholder="ghp_xxxx" value="你的PAT">
-            </div>
-            <div class="mb-2">
-                <label>分支名：</label>
-                <input type="text" id="github-branch" class="form-control w-50 mt-1" placeholder="main" value="main">
-            </div>
-        </div>
-
-        <!-- 上传区 -->
-        <div class="upload-area mt-4">
-            <h4>上传打卡文件</h4>
-            <input type="file" id="file-upload" accept=".md" class="form-control mt-2">
-            <button id="upload-btn" class="btn btn-primary mt-2">上传文件</button>
-            <div id="upload-status" class="mt-2 text-success"></div>
-        </div>
-
-        <!-- 文件列表 -->
-        <div class="file-list-area mt-4">
-            <h4>已上传的打卡文件</h4>
-            <div id="file-list" class="file-list"></div>
-        </div>
-
-        <!-- 编辑+预览 -->
-        <div class="editor-container mt-4">
-            <h4>编辑打卡内容</h4>
-            <div class="row mt-2">
-                <div class="col-md-6">
-                    <textarea id="editor"></textarea>
-                    <div class="mt-3">
-                        <button id="save-btn" class="btn btn-success">保存修改</button>
-                        <button id="export-btn" class="btn btn-info export-btn" disabled>导出文件</button>
-                        <div id="save-status" class="mt-2 text-success"></div>
-                    </div>
+    <div class="app-container">
+        <!-- 侧边栏（配置区） -->
+        <div class="sidebar" id="sidebar">
+            <button class="sidebar-toggle" id="sidebar-toggle">→</button>
+            <div class="alert alert-info">
+                <h5>GitHub配置</h5>
+                <div class="mb-2">
+                    <label>用户名：</label>
+                    <input type="text" id="github-user" class="form-control mt-1" placeholder="如：Frost-Woods" value="你的用户名">
                 </div>
-                <div class="col-md-6">
-                    <h5 class="mb-2">实时预览</h5>
-                    <div id="preview" class="border p-3"></div>
+                <div class="mb-2">
+                    <label>仓库名：</label>
+                    <input type="text" id="github-repo" class="form-control mt-1" placeholder="如：Markdown-Checkin" value="你的仓库名">
+                </div>
+                <div class="mb-2">
+                    <label>PAT（repo权限）：</label>
+                    <input type="password" id="github-token" class="form-control mt-1" placeholder="ghp_xxxx" value="你的PAT">
+                </div>
+                <div class="mb-2">
+                    <label>分支名：</label>
+                    <input type="text" id="github-branch" class="form-control mt-1" placeholder="main" value="main">
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <h1>Markdown打卡平台</h1>
+
+            <!-- 上传区 -->
+            <div class="upload-area mt-4">
+                <h4>上传打卡文件</h4>
+                <input type="file" id="file-upload" accept=".md" class="form-control mt-2">
+                <button id="upload-btn" class="btn btn-primary mt-2">上传文件</button>
+                <div id="upload-status" class="mt-2 text-success"></div>
+            </div>
+
+            <!-- 文件列表 -->
+            <div class="file-list-area mt-4">
+                <h4>已上传的打卡文件</h4>
+                <div id="file-list" class="file-list"></div>
+            </div>
+
+            <!-- 编辑+预览 -->
+            <div class="editor-container mt-4">
+                <h4>编辑打卡内容</h4>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <textarea id="editor"></textarea>
+                        <div class="mt-3">
+                            <button id="save-btn" class="btn btn-success">保存修改</button>
+                            <button id="export-btn" class="btn btn-info export-btn" disabled>导出文件</button>
+                            <div id="save-status" class="mt-2 text-success"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="mb-2">实时预览</h5>
+                        <div id="preview" class="border"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -91,6 +242,12 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@9.1.0/marked.min.js"></script>
+    <!-- 代码高亮脚本（Prism） -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-html.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-css.min.js"></script>
 
     <script>
         // 初始化编辑器
@@ -101,9 +258,18 @@
             toolbar: ["bold", "italic", "heading", "|", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "fullscreen"]
         });
 
-        // 实时预览
+        // 实时预览（集成代码高亮）
         simplemde.codemirror.on("change", function() {
             const content = simplemde.value();
+            // 配置marked支持代码高亮
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (lang && Prism.languages[lang]) {
+                        return Prism.highlight(code, Prism.languages[lang], lang);
+                    }
+                    return code;
+                }
+            });
             document.getElementById("preview").innerHTML = marked.parse(content) || "<p class='text-muted'>编辑Markdown内容，这里实时预览～</p>";
         });
 
@@ -172,7 +338,6 @@
 
                     // 获取每个文件的最后提交时间
                     mdFiles.forEach(file => {
-                        // 获取提交时间
                         const commitUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/commits?path=${encodeURIComponent(file.name)}&per_page=1&ref=${GITHUB_CONFIG.branch}`;
                         $.get({
                             url: commitUrl,
@@ -211,11 +376,7 @@
             });
         }
 
-        // 加载文件内容
-        // 原错误解码逻辑
-        // const content = atob(data.content.replace(/\n/g, ""));
-
-        // 替换为以下UTF-8兼容的解码逻辑
+        // 加载文件内容（UTF-8兼容）
         function loadFileContent(filename) {
             if (!getConfig()) return;
             
@@ -224,17 +385,12 @@
                 url: apiUrl,
                 headers: getHeaders(),
                 success: function(data) {
-                    // ========== 修复核心：UTF-8兼容的Base64解码 ==========
-                    // 步骤1：解码Base64为二进制字符串
                     const binaryStr = atob(data.content.replace(/\n/g, ""));
-                    // 步骤2：将二进制字符串转为UTF-8编码的字符串
                     let utf8Str = "";
                     for (let i = 0; i < binaryStr.length; i++) {
                         utf8Str += String.fromCharCode(binaryStr.charCodeAt(i));
                     }
-                    // 步骤3：处理UTF-8多字节字符（关键）
                     const content = decodeURIComponent(escape(utf8Str));
-                    // ====================================================
                     
                     simplemde.value(content);
                     currentFile = { name: filename, sha: data.sha };
@@ -266,7 +422,7 @@
             playAudio("success-audio");
             const reader = new FileReader();
             reader.onload = function(e) {
-                const content = btoa(e.target.result); // 编码为base64
+                const content = btoa(e.target.result);
                 const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/${encodeURIComponent(file.name)}?ref=${GITHUB_CONFIG.branch}`;
                 $("#upload-status").text("上传中...").removeClass("text-danger").addClass("text-success");
 
@@ -305,7 +461,6 @@
             const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/${encodeURIComponent(currentFile.name)}?ref=${GITHUB_CONFIG.branch}`;
             $("#save-status").text("保存中...");
 
-            // 先获取最新sha（防止冲突）
             $.get({
                 url: apiUrl,
                 headers: getHeaders(),
@@ -316,7 +471,7 @@
                         headers: getHeaders(),
                         data: JSON.stringify({
                             message: `Update ${currentFile.name} - ${new Date().toLocaleString()}`,
-                            content: btoa(unescape(encodeURIComponent(content))), // 处理中文
+                            content: btoa(unescape(encodeURIComponent(content))),
                             sha: fileData.sha,
                             branch: GITHUB_CONFIG.branch
                         }),
@@ -382,15 +537,40 @@
             URL.revokeObjectURL(url);
         });
 
+        // 侧边栏切换
+        $("#sidebar-toggle").click(function() {
+            const sidebar = $("#sidebar");
+            const toggleBtn = $(this);
+            if (sidebar.hasClass("collapsed")) {
+                sidebar.removeClass("collapsed");
+                toggleBtn.text("→");
+            } else {
+                sidebar.addClass("collapsed");
+                toggleBtn.text("←");
+            }
+        });
+
+        // 明暗模式切换
+        $("#theme-toggle").click(function() {
+            const body = document.documentElement;
+            const toggleBtn = $(this);
+            if (body.classList.contains("light-mode")) {
+                body.classList.remove("light-mode");
+                body.classList.add("dark-mode");
+                toggleBtn.text("☀️");
+            } else {
+                body.classList.remove("dark-mode");
+                body.classList.add("light-mode");
+                toggleBtn.text("🌙");
+            }
+        });
+
         // 页面加载初始化
         $(document).ready(function() {
             loadFileList();
             document.getElementById("preview").innerHTML = "<p class='text-muted'>编辑Markdown内容，这里实时预览～</p>";
-
-            // 配置修改后重新加载
             $("#github-user, #github-repo, #github-token, #github-branch").change(loadFileList);
         });
     </script>
 </body>
-
 </html>
