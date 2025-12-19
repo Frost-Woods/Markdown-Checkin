@@ -6,58 +6,96 @@
     <title>Markdown打卡平台（GitHub直连版）</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.css">
-    <!-- 代码高亮样式（Prism） -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
     <style>
-        /* 基础布局 */
-        body { 
+        /* 基础布局（修复暗色模式全屏渲染） */
+        html, body { 
             padding: 0;
             margin: 0;
             transition: background-color 0.3s, color 0.3s;
+            min-height: 100vh;
         }
         .app-container {
             display: flex;
             min-height: 100vh;
+            width: 100%;
         }
 
-        /* 侧边栏样式 */
+        /* 侧边栏样式（修复展开/收起 + 图标优化） */
         .sidebar {
             width: 300px;
             background-color: #f8f9fa;
             padding: 20px;
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-            transition: background-color 0.3s;
+            transition: all 0.3s ease;
             position: relative;
+            min-height: 100vh;
+            z-index: 10;
         }
-        .sidebar-toggle {
-            position: absolute;
-            right: -20px;
-            top: 20px;
-            background-color: #0d6efd;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        /* 侧边栏收起状态 */
         .sidebar.collapsed {
-            width: 0;
+            width: 60px;
             padding: 0;
             overflow: hidden;
         }
+        /* 侧边栏切换按钮（三条纹图标） */
+        .sidebar-toggle {
+            position: absolute;
+            right: 15px;
+            top: 20px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            transition: color 0.3s;
+        }
+        /* 暗色模式下按钮颜色 */
+        .dark-mode .sidebar-toggle {
+            color: #e0e0e0;
+        }
+        /* 收起时按钮位置调整 */
         .sidebar.collapsed .sidebar-toggle {
-            right: 0;
+            right: 15px;
+        }
+        /* 三条纹图标样式 */
+        .sidebar-toggle .hamburger {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background-color: currentColor;
+            position: relative;
+        }
+        .sidebar-toggle .hamburger::before,
+        .sidebar-toggle .hamburger::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 2px;
+            background-color: currentColor;
+            left: 0;
+        }
+        .sidebar-toggle .hamburger::before {
+            top: -6px;
+        }
+        .sidebar-toggle .hamburger::after {
+            top: 6px;
+        }
+        /* 收起时按钮旋转 */
+        .sidebar.collapsed .sidebar-toggle .hamburger {
+            transform: rotate(90deg);
         }
 
-        /* 主内容区 */
+        /* 主内容区（修复暗色模式背景） */
         .main-content {
             flex: 1;
             padding: 20px;
             overflow-y: auto;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         /* 文件项样式 */
@@ -108,7 +146,7 @@
             height: auto; 
         }
 
-        /* 明暗模式切换 */
+        /* 明暗模式切换按钮 */
         .theme-toggle {
             position: fixed;
             top: 20px;
@@ -125,12 +163,55 @@
             justify-content: center;
             z-index: 100;
         }
+        /* 明亮模式样式 */
+        .light-mode {
+            background-color: #ffffff;
+            color: #333333;
+        }
+        .light-mode .sidebar {
+            background-color: #f8f9fa;
+        }
+        .light-mode .file-item {
+            border-color: #eee;
+        }
+        .light-mode .file-item:hover {
+            background-color: #f5f5f5;
+        }
+        .light-mode #preview {
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .light-mode #preview h1, .light-mode #preview h2, .light-mode #preview h3 {
+            border-bottom-color: #eee;
+        }
+        .light-mode #preview code {
+            background-color: #eee;
+            color: #333;
+        }
+        .light-mode #preview pre {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .light-mode input, .light-mode textarea, .light-mode .form-control {
+            background-color: #ffffff;
+            color: #333;
+            border-color: #ddd;
+        }
+        .light-mode .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
+        }
+        /* 暗色模式样式（修复全屏渲染） */
         .dark-mode {
             background-color: #1a1a1a;
             color: #e0e0e0;
         }
         .dark-mode .sidebar {
             background-color: #2d2d2d;
+        }
+        .dark-mode .main-content {
+            background-color: #1a1a1a;
         }
         .dark-mode .file-item {
             border-color: #444;
@@ -140,15 +221,18 @@
         }
         .dark-mode #preview {
             background-color: #2d2d2d;
+            color: #e0e0e0;
         }
         .dark-mode #preview h1, .dark-mode #preview h2, .dark-mode #preview h3 {
             border-bottom-color: #444;
         }
         .dark-mode #preview code {
             background-color: #444;
+            color: #e0e0e0;
         }
         .dark-mode #preview pre {
             background-color: #3d3d3d;
+            color: #e0e0e0;
         }
         .dark-mode input, .dark-mode textarea, .dark-mode .form-control {
             background-color: #3d3d3d;
@@ -178,8 +262,10 @@
     <div class="app-container">
         <!-- 侧边栏（配置区） -->
         <div class="sidebar" id="sidebar">
-            <button class="sidebar-toggle" id="sidebar-toggle">→</button>
-            <div class="alert alert-info">
+            <button class="sidebar-toggle" id="sidebar-toggle">
+                <span class="hamburger"></span>
+            </button>
+            <div class="alert alert-info p-3" style="margin-top: 60px;">
                 <h5>GitHub配置</h5>
                 <div class="mb-2">
                     <label>用户名：</label>
@@ -242,7 +328,6 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@9.1.0/marked.min.js"></script>
-    <!-- 代码高亮脚本（Prism） -->
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
@@ -261,7 +346,6 @@
         // 实时预览（集成代码高亮）
         simplemde.codemirror.on("change", function() {
             const content = simplemde.value();
-            // 配置marked支持代码高亮
             marked.setOptions({
                 highlight: function(code, lang) {
                     if (lang && Prism.languages[lang]) {
@@ -336,7 +420,6 @@
                         return;
                     }
 
-                    // 获取每个文件的最后提交时间
                     mdFiles.forEach(file => {
                         const commitUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/commits?path=${encodeURIComponent(file.name)}&per_page=1&ref=${GITHUB_CONFIG.branch}`;
                         $.get({
@@ -349,13 +432,11 @@
                                     <button class='btn btn-danger btn-sm delete-btn' data-filename='${file.name}' data-sha='${file.sha}'>删除</button>
                                 </div>`);
 
-                                // 加载文件内容
                                 fileItem.find("div:first").click(function() {
                                     const filename = $(this).parent().find(".delete-btn").data("filename");
                                     loadFileContent(filename);
                                 });
 
-                                // 删除文件
                                 fileItem.find(".delete-btn").click(function(e) {
                                     e.stopPropagation();
                                     const filename = $(this).data("filename");
@@ -537,30 +618,27 @@
             URL.revokeObjectURL(url);
         });
 
-        // 侧边栏切换
+        // 侧边栏切换（修复展开/收起逻辑）
         $("#sidebar-toggle").click(function() {
             const sidebar = $("#sidebar");
-            const toggleBtn = $(this);
             if (sidebar.hasClass("collapsed")) {
                 sidebar.removeClass("collapsed");
-                toggleBtn.text("→");
             } else {
                 sidebar.addClass("collapsed");
-                toggleBtn.text("←");
             }
         });
 
-        // 明暗模式切换
+        // 明暗模式切换（修复全屏渲染）
         $("#theme-toggle").click(function() {
-            const body = document.documentElement;
+            const html = document.documentElement;
             const toggleBtn = $(this);
-            if (body.classList.contains("light-mode")) {
-                body.classList.remove("light-mode");
-                body.classList.add("dark-mode");
+            if (html.classList.contains("light-mode")) {
+                html.classList.remove("light-mode");
+                html.classList.add("dark-mode");
                 toggleBtn.text("☀️");
             } else {
-                body.classList.remove("dark-mode");
-                body.classList.add("light-mode");
+                html.classList.remove("dark-mode");
+                html.classList.add("light-mode");
                 toggleBtn.text("🌙");
             }
         });
@@ -574,3 +652,4 @@
     </script>
 </body>
 </html>
+
