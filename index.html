@@ -212,16 +212,30 @@
         }
 
         // 加载文件内容
+        // 原错误解码逻辑
+        // const content = atob(data.content.replace(/\n/g, ""));
+
+        // 替换为以下UTF-8兼容的解码逻辑
         function loadFileContent(filename) {
             if (!getConfig()) return;
-
+            
             const apiUrl = `https://api.github.com/repos/${GITHUB_CONFIG.user}/${GITHUB_CONFIG.repo}/contents/${encodeURIComponent(filename)}?ref=${GITHUB_CONFIG.branch}`;
             $.get({
                 url: apiUrl,
                 headers: getHeaders(),
                 success: function(data) {
-                    // 解码base64内容
-                    const content = atob(data.content.replace(/\n/g, ""));
+                    // ========== 修复核心：UTF-8兼容的Base64解码 ==========
+                    // 步骤1：解码Base64为二进制字符串
+                    const binaryStr = atob(data.content.replace(/\n/g, ""));
+                    // 步骤2：将二进制字符串转为UTF-8编码的字符串
+                    let utf8Str = "";
+                    for (let i = 0; i < binaryStr.length; i++) {
+                        utf8Str += String.fromCharCode(binaryStr.charCodeAt(i));
+                    }
+                    // 步骤3：处理UTF-8多字节字符（关键）
+                    const content = decodeURIComponent(escape(utf8Str));
+                    // ====================================================
+                    
                     simplemde.value(content);
                     currentFile = { name: filename, sha: data.sha };
                     $("#export-btn").prop("disabled", false);
@@ -378,4 +392,5 @@
         });
     </script>
 </body>
+
 </html>
