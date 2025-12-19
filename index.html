@@ -6,7 +6,8 @@
     <title>Markdown打卡平台（GitHub直连版）</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+    <!-- 增强版Prism高亮主题 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-vs.min.css">
     <style>
         /* 基础布局 */
         html, body { 
@@ -107,7 +108,7 @@
             font-size: 12px; 
         }
 
-        /* 预览区样式 --- 【修改1：添加自动换行样式】 */
+        /* 预览区样式 */
         #preview { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             line-height: 1.6; 
@@ -116,7 +117,6 @@
             border-radius: 4px;
             transition: background-color 0.3s, color 0.3s, border-color 0.3s;
             border: 1px solid #eee;
-            /* 新增自动换行配置 */
             white-space: pre-wrap;
             word-wrap: break-word;
         }
@@ -126,14 +126,20 @@
             margin-top: 1rem; 
             transition: border-color 0.3s;
         }
+        /* 增强代码块高亮样式 */
         #preview code { 
             padding: 2px 4px; 
             border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
         }
         #preview pre { 
-            padding: 1rem; 
-            border-radius: 4px; 
+            padding: 1.5rem;
+            border-radius: 8px;
             overflow-x: auto;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 1rem 0;
         }
         #preview img { 
             max-width: 100%; 
@@ -153,6 +159,48 @@
             cursor: pointer;
             z-index: 100;
             font-size: 14px;
+        }
+
+        /* 【新增：代码块语言选择下拉按钮样式】 */
+        .CodeMirror .editor-toolbar .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .CodeMirror .editor-toolbar .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 1000;
+            display: none;
+            float: left;
+            min-width: 120px;
+            padding: 5px 0;
+            margin: 2px 0 0;
+            font-size: 14px;
+            text-align: left;
+            list-style: none;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.175);
+        }
+        .dark-mode .CodeMirror .editor-toolbar .dropdown-menu {
+            background-color: #2d2d2d;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+        .CodeMirror .editor-toolbar .dropdown-menu li {
+            padding: 3px 20px;
+            cursor: pointer;
+        }
+        .CodeMirror .editor-toolbar .dropdown-menu li:hover {
+            background-color: #f5f5f5;
+        }
+        .dark-mode .CodeMirror .editor-toolbar .dropdown-menu li:hover {
+            background-color: #3d3d3d;
+        }
+        .CodeMirror .editor-toolbar .dropdown:hover .dropdown-menu {
+            display: block;
         }
 
         /* 明亮模式样式 */
@@ -184,11 +232,11 @@
             border-bottom-color: #eee;
         }
         .light-mode #preview code {
-            background-color: #eee;
-            color: #333;
+            background-color: #f0f0f0;
+            color: #d63384;
         }
         .light-mode #preview pre {
-            background-color: #f5f5f5;
+            background-color: #f8f9fa;
             color: #333;
         }
         .light-mode input, .light-mode textarea, .light-mode .form-control {
@@ -258,10 +306,10 @@
         }
         .dark-mode #preview code {
             background-color: #444;
-            color: #e0e0e0;
+            color: #c9d1d9;
         }
         .dark-mode #preview pre {
-            background-color: #3d3d3d;
+            background-color: #252525;
             color: #e0e0e0;
         }
         .dark-mode input, .dark-mode textarea, .dark-mode .form-control {
@@ -391,34 +439,93 @@
     <script src="https://cdn.jsdelivr.net/npm/simplemde@1.11.2/dist/simplemde.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@9.1.0/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <!-- 加载更多代码语言的高亮组件 -->
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-html.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-java.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-cpp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-rust.min.js"></script>
 
     <script>
-        // 初始化编辑器
+        // 【核心新增：代码块语言选择工具函数】
+        function insertCodeBlock(lang) {
+            const simplemde = window.simplemdeInstance;
+            const cursor = simplemde.codemirror.getCursor();
+            const selectedText = simplemde.codemirror.getSelection();
+            
+            // 代码块模板：保留选中内容，光标定位到代码块内部
+            const codeBlock = `\n\`\`\`${lang}\n${selectedText || ''}\n\`\`\`\n`;
+            simplemde.codemirror.replaceSelection(codeBlock);
+            
+            // 将光标移动到代码块内部
+            if (!selectedText) {
+                const newCursor = {
+                    line: cursor.line + 2,
+                    ch: 0
+                };
+                simplemde.codemirror.setCursor(newCursor);
+            }
+            
+            // 触发预览更新
+            simplemde.codemirror.focus();
+            simplemde.codemirror.trigger('change');
+        }
+
+        // 初始化编辑器（新增代码块语言选择按钮）
         const simplemde = new SimpleMDE({
             element: document.getElementById("editor"),
             autofocus: false,
             spellChecker: false,
-            toolbar: ["bold", "italic", "heading", "|", "unordered-list", "ordered-list", "|", "link", "image", "|", "preview", "fullscreen"]
+            toolbar: [
+                "bold", "italic", "heading", "|", 
+                "unordered-list", "ordered-list", "|", 
+                "link", "image", "|",
+                // 【新增：代码块语言选择下拉按钮】
+                {
+                    name: "code-block",
+                    className: "dropdown",
+                    title: "插入代码块",
+                    innerHTML: `
+                        <button type="button" class="btn btn-sm">代码块 ▼</button>
+                        <ul class="dropdown-menu">
+                            <li onclick="insertCodeBlock('text')">纯文本</li>
+                            <li onclick="insertCodeBlock('javascript')">JavaScript</li>
+                            <li onclick="insertCodeBlock('python')">Python</li>
+                            <li onclick="insertCodeBlock('html')">HTML</li>
+                            <li onclick="insertCodeBlock('css')">CSS</li>
+                            <li onclick="insertCodeBlock('java')">Java</li>
+                            <li onclick="insertCodeBlock('cpp')">C++</li>
+                            <li onclick="insertCodeBlock('go')">Go</li>
+                            <li onclick="insertCodeBlock('rust')">Rust</li>
+                        </ul>
+                    `
+                },
+                "|", "preview", "fullscreen"
+            ]
         });
+        // 挂载到全局，方便工具函数调用
+        window.simplemdeInstance = simplemde;
 
-        // 实时预览（集成代码高亮） --- 【修改2：添加breaks: true】
+        // 实时预览（集成代码高亮）
         simplemde.codemirror.on("change", function() {
             const content = simplemde.value();
             marked.setOptions({
                 highlight: function(code, lang) {
-                    if (lang && Prism.languages[lang]) {
+                    // 确保代码块完整解析（兼容无语言标识的情况）
+                    if (!lang) lang = 'text';
+                    if (Prism.languages[lang]) {
                         return Prism.highlight(code, Prism.languages[lang], lang);
                     }
                     return code;
                 },
-                // 新增：让单个换行解析为<br>，实现实时换行
                 breaks: true
             });
-            document.getElementById("preview").innerHTML = marked.parse(content) || "<p class='text-muted'>编辑Markdown内容，这里实时预览～</p>";
+            // 修复代码块断层（强制保留原始换行）
+            const parsedContent = marked.parse(content.replace(/\n/g, '\n'));
+            document.getElementById("preview").innerHTML = parsedContent || "<p class='text-muted'>编辑Markdown内容，这里实时预览～</p>";
         });
 
         // 全局变量
