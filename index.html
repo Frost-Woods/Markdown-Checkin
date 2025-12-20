@@ -208,38 +208,49 @@
             display: block;
         }
 
-        /* 【强制编辑区限高（彻底覆盖所有默认样式）】 */
+        /* 【终极修复：编辑区强制滚动条（原生滚动条）】 */
         #editor-wrapper {
-            height: 500px !important; /* 强制容器高度 */
+            height: 500px !important; /* 固定高度 */
             width: 100% !important;
-            overflow: hidden !important; /* 防止内部元素撑大容器 */
+            overflow: hidden !important; /* 防止容器被撑大 */
             position: relative !important;
             box-sizing: border-box !important;
+            border: 1px solid #ddd; /* 加边框区分区域 */
+            border-radius: 4px;
         }
-        /* 覆盖SimpleMDE根容器样式 */
+        /* 覆盖SimpleMDE根容器 */
         #editor-wrapper .simplemde {
             height: 100% !important;
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             box-sizing: border-box !important;
+            border: none !important;
         }
-        /* 覆盖工具栏样式 */
+        /* 工具栏固定高度 */
         #editor-wrapper .simplemde .editor-toolbar {
             height: 40px !important;
             width: 100% !important;
             margin: 0 !important;
             padding: 0 10px !important;
             box-sizing: border-box !important;
+            border-bottom: 1px solid #ddd !important;
         }
-        /* 强制CodeMirror编辑区高度 */
+        /* 【强制CodeMirror显示原生滚动条】 */
         #editor-wrapper .simplemde .CodeMirror {
             height: calc(100% - 40px) !important; /* 总高度 - 工具栏高度 */
             max-height: 460px !important;
             width: 100% !important;
-            overflow-y: scroll !important; /* 强制显示滚动条 */
+            overflow-y: scroll !important; /* 强制垂直滚动 */
+            overflow-x: auto !important;
             line-height: 1.4 !important;
             box-sizing: border-box !important;
+            scrollbar-width: thin !important; /* 强制显示滚动条（Firefox） */
+        }
+        /* Chrome/Safari强制显示滚动条 */
+        #editor-wrapper .simplemde .CodeMirror::-webkit-scrollbar {
+            width: 8px !important;
+            display: block !important;
         }
         .simplemde .CodeMirror-lines {
             line-height: 1.4 !important;
@@ -298,16 +309,13 @@
         }
         .light-mode .simplemde {
             background-color: #ffffff;
-            border-color: #ddd;
         }
         .light-mode .simplemde .editor-toolbar {
             background-color: #f8f9fa;
-            border-bottom-color: #ddd;
         }
         .light-mode .simplemde .CodeMirror {
             background-color: #ffffff;
             color: #333;
-            border-color: #ddd;
         }
         .light-mode .simplemde .CodeMirror-gutter {
             background-color: #f8f9fa;
@@ -365,29 +373,18 @@
         }
         .dark-mode .simplemde {
             background-color: #3d3d3d;
-            border-color: #666;
         }
         .dark-mode .simplemde .editor-toolbar {
             background-color: #2d2d2d;
             border-bottom-color: #666;
         }
-        .dark-mode .simplemde .editor-toolbar button {
-            color: #e0e0e0;
-        }
-        .dark-mode .simplemde .editor-toolbar button:hover {
-            color: #ffffff;
-        }
         .dark-mode .simplemde .CodeMirror {
             background-color: #3d3d3d;
             color: #e0e0e0;
-            border-color: #666;
         }
         .dark-mode .simplemde .CodeMirror-gutter {
             background-color: #2d2d2d;
             border-right-color: #666;
-        }
-        .dark-mode .simplemde .CodeMirror-lines {
-            color: #e0e0e0;
         }
         .dark-mode .alert-info {
             background-color: #2d3b45;
@@ -485,7 +482,7 @@
                 <h4>编辑打卡内容</h4>
                 <div class="row mt-2">
                     <div class="col-md-6">
-                        <!-- 【重命名容器：强化样式优先级】 -->
+                        <!-- 编辑区容器 -->
                         <div id="editor-wrapper">
                             <textarea id="editor"></textarea>
                         </div>
@@ -539,12 +536,12 @@
             simplemde.codemirror.trigger('change');
         }
 
-        // 初始化编辑器（强制高度配置）
+        // 初始化编辑器（强制原生滚动条）
         const simplemde = new SimpleMDE({
             element: document.getElementById("editor"),
             autofocus: false,
             spellChecker: false,
-            autosize: false, // 彻底关闭自动调整
+            autosize: false,
             toolbar: [
                 "bold", "italic", "heading", "|", 
                 "unordered-list", "ordered-list", "|", 
@@ -570,8 +567,12 @@
                 },
                 "|", "preview", "fullscreen"
             ],
-            // 直接设置编辑器高度（覆盖默认）
-            height: "500px"
+            // 强制CodeMirror使用原生滚动条
+            codemirrorOptions: {
+                scrollbarStyle: "native", // 原生滚动条（关键）
+                lineNumbers: true,
+                lineWrapping: true
+            }
         });
         window.simplemdeInstance = simplemde;
 
