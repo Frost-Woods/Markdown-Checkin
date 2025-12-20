@@ -107,11 +107,11 @@
             font-size: 12px; 
         }
 
-        /* 预览区样式 - 减小行间距 + 强制滚动条 */
+        /* 预览区样式 */
         #preview { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             line-height: 1.4;
-            height: 500px; /* 固定高度 */
+            height: 500px;
             max-height: 500px;
             padding: 1rem;
             border-radius: 4px;
@@ -119,8 +119,8 @@
             border: 1px solid #eee;
             white-space: pre-wrap;
             word-wrap: break-word;
-            overflow-y: scroll; /* 强制显示滚动条 */
-            scroll-behavior: smooth; /* 平滑滚动 */
+            overflow-y: scroll;
+            scroll-behavior: smooth;
         }
         #preview h1, #preview h2, #preview h3 { 
             border-bottom: 1px solid #eee; 
@@ -151,7 +151,7 @@
             height: auto; 
         }
 
-        /* 明暗模式切换按钮（改为文字样式） */
+        /* 明暗模式切换按钮 */
         .theme-toggle {
             position: fixed;
             top: 20px;
@@ -208,23 +208,41 @@
             display: block;
         }
 
-        /* 【关键修复：编辑区强制限高+滚动条】 */
-        #editor-container {
-            height: 500px; /* 编辑容器固定高度 */
-            position: relative;
+        /* 【强制编辑区限高（彻底覆盖所有默认样式）】 */
+        #editor-wrapper {
+            height: 500px !important; /* 强制容器高度 */
+            width: 100% !important;
+            overflow: hidden !important; /* 防止内部元素撑大容器 */
+            position: relative !important;
+            box-sizing: border-box !important;
         }
-        .simplemde {
-            height: 100% !important; /* 强制覆盖SimpleMDE默认样式 */
+        /* 覆盖SimpleMDE根容器样式 */
+        #editor-wrapper .simplemde {
+            height: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
         }
-        .simplemde .CodeMirror {
-            height: calc(100% - 40px) !important; /* 减去工具栏高度 */
+        /* 覆盖工具栏样式 */
+        #editor-wrapper .simplemde .editor-toolbar {
+            height: 40px !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 10px !important;
+            box-sizing: border-box !important;
+        }
+        /* 强制CodeMirror编辑区高度 */
+        #editor-wrapper .simplemde .CodeMirror {
+            height: calc(100% - 40px) !important; /* 总高度 - 工具栏高度 */
             max-height: 460px !important;
-            overflow-y: scroll !important; /* 强制显示垂直滚动条 */
-            line-height: 1.4;
-            scroll-behavior: smooth;
+            width: 100% !important;
+            overflow-y: scroll !important; /* 强制显示滚动条 */
+            line-height: 1.4 !important;
+            box-sizing: border-box !important;
         }
         .simplemde .CodeMirror-lines {
-            line-height: 1.4;
+            line-height: 1.4 !important;
         }
 
         /* 明亮模式样式 */
@@ -414,7 +432,7 @@
     </audio>
 </head>
 <body>
-    <!-- 主题切换按钮（改为文字） -->
+    <!-- 主题切换按钮 -->
     <button class="theme-toggle" id="theme-toggle">切换到深色模式</button>
 
     <div class="app-container">
@@ -467,8 +485,8 @@
                 <h4>编辑打卡内容</h4>
                 <div class="row mt-2">
                     <div class="col-md-6">
-                        <!-- 【新增：编辑区容器，强制限高】 -->
-                        <div id="editor-container">
+                        <!-- 【重命名容器：强化样式优先级】 -->
+                        <div id="editor-wrapper">
                             <textarea id="editor"></textarea>
                         </div>
                         <div class="mt-3">
@@ -521,11 +539,12 @@
             simplemde.codemirror.trigger('change');
         }
 
-        // 初始化编辑器
+        // 初始化编辑器（强制高度配置）
         const simplemde = new SimpleMDE({
             element: document.getElementById("editor"),
             autofocus: false,
             spellChecker: false,
+            autosize: false, // 彻底关闭自动调整
             toolbar: [
                 "bold", "italic", "heading", "|", 
                 "unordered-list", "ordered-list", "|", 
@@ -551,12 +570,12 @@
                 },
                 "|", "preview", "fullscreen"
             ],
-            // 确保编辑器高度受控
-            autosize: false
+            // 直接设置编辑器高度（覆盖默认）
+            height: "500px"
         });
         window.simplemdeInstance = simplemde;
 
-        // 【核心功能：预览区自动跟随滚动到底部】
+        // 预览区自动跟随滚动
         function scrollPreviewToBottom() {
             const preview = document.getElementById('preview');
             preview.scrollTop = preview.scrollHeight;
@@ -578,17 +597,14 @@
             const parsedContent = marked.parse(content.replace(/\n/g, '\n'));
             document.getElementById("preview").innerHTML = parsedContent || "<p class='text-muted'>编辑Markdown内容，这里实时预览～</p>";
             
-            // 预览区自动滚动到底部
             setTimeout(scrollPreviewToBottom, 50);
         });
 
-        // 编辑区光标位置变化时，预览区也跟随滚动
+        // 编辑区光标位置变化时跟随滚动
         simplemde.codemirror.on("cursorActivity", function() {
-            // 获取编辑区最后一行
             const lastLine = simplemde.codemirror.lastLine();
             const cursorLine = simplemde.codemirror.getCursor().line;
             
-            // 如果光标在最后10行内，预览区滚动到底部
             if (lastLine - cursorLine < 10) {
                 setTimeout(scrollPreviewToBottom, 50);
             }
@@ -715,7 +731,6 @@
                     $("#export-btn").prop("disabled", false);
                     $("#save-status").text("");
                     
-                    // 加载文件后预览区自动滚动到底部
                     setTimeout(scrollPreviewToBottom, 100);
                 },
                 error: function(err) {
@@ -888,8 +903,6 @@
             loadFileList();
             document.getElementById("preview").innerHTML = "<p class='text-muted'>编辑Markdown内容，这里实时预览～</p>";
             $("#github-user, #github-repo, #github-token, #github-branch").change(loadFileList);
-            
-            // 初始化时预览区滚动到底部
             scrollPreviewToBottom();
         });
     </script>
