@@ -208,52 +208,15 @@
             display: block;
         }
 
-        /* 【终极修复：编辑区强制滚动条（原生滚动条）】 */
+        /* 编辑区容器（仅做基础布局，高度由JS控制） */
         #editor-wrapper {
-            height: 500px !important; /* 固定高度 */
             width: 100% !important;
-            overflow: hidden !important; /* 防止容器被撑大 */
+            overflow: hidden !important;
             position: relative !important;
             box-sizing: border-box !important;
-            border: 1px solid #ddd; /* 加边框区分区域 */
+            border: 1px solid #ddd;
             border-radius: 4px;
-        }
-        /* 覆盖SimpleMDE根容器 */
-        #editor-wrapper .simplemde {
-            height: 100% !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            box-sizing: border-box !important;
-            border: none !important;
-        }
-        /* 工具栏固定高度 */
-        #editor-wrapper .simplemde .editor-toolbar {
-            height: 40px !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 10px !important;
-            box-sizing: border-box !important;
-            border-bottom: 1px solid #ddd !important;
-        }
-        /* 【强制CodeMirror显示原生滚动条】 */
-        #editor-wrapper .simplemde .CodeMirror {
-            height: calc(100% - 40px) !important; /* 总高度 - 工具栏高度 */
-            max-height: 460px !important;
-            width: 100% !important;
-            overflow-y: scroll !important; /* 强制垂直滚动 */
-            overflow-x: auto !important;
-            line-height: 1.4 !important;
-            box-sizing: border-box !important;
-            scrollbar-width: thin !important; /* 强制显示滚动条（Firefox） */
-        }
-        /* Chrome/Safari强制显示滚动条 */
-        #editor-wrapper .simplemde .CodeMirror::-webkit-scrollbar {
-            width: 8px !important;
-            display: block !important;
-        }
-        .simplemde .CodeMirror-lines {
-            line-height: 1.4 !important;
+            /* 仅保留基础样式，高度由CodeMirror JS配置控制 */
         }
 
         /* 明亮模式样式 */
@@ -392,7 +355,7 @@
             border-color: #445a6b;
         }
 
-        /* 美化滚动条 */
+        /* 美化滚动条（通用） */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -536,12 +499,13 @@
             simplemde.codemirror.trigger('change');
         }
 
-        // 初始化编辑器（强制原生滚动条）
+        // ===================== 核心修改：CodeMirror原生配置 + 滚动API优化 =====================
+        // 初始化编辑器（基于CodeMirror原生配置解决滚动条问题）
         const simplemde = new SimpleMDE({
             element: document.getElementById("editor"),
             autofocus: false,
             spellChecker: false,
-            autosize: false,
+            autosize: false, // 关闭SimpleMDE自动高度调整
             toolbar: [
                 "bold", "italic", "heading", "|", 
                 "unordered-list", "ordered-list", "|", 
@@ -567,23 +531,40 @@
                 },
                 "|", "preview", "fullscreen"
             ],
-            // 强制CodeMirror使用原生滚动条
+            // 关键：CodeMirror原生配置（彻底解决滚动条问题）
             codemirrorOptions: {
-                scrollbarStyle: "native", // 原生滚动条（关键）
-                lineNumbers: true,
-                lineWrapping: true
+                scrollbarStyle: "native", // 强制使用浏览器原生滚动条（核心）
+                height: "460px", // 固定编辑区高度（不含工具栏，总容器高度500px）
+                lineWrapping: true, // 自动换行，避免横向滚动
+                viewportMargin: Infinity, // 确保内容渲染完整
+                lineNumbers: true, // 显示行号（可选，提升体验）
+                autoresize: false // 禁用CodeMirror自动调整高度
             }
         });
         window.simplemdeInstance = simplemde;
 
-        // 预览区自动跟随滚动
-        function scrollPreviewToBottom() {
-            const preview = document.getElementById('preview');
-            preview.scrollTop = preview.scrollHeight;
-        }
+        // 获取CodeMirror实例（用于后续滚动API操作）
+        const cm = simplemde.codemirror;
 
-        // 实时预览 + 自动滚动
-        simplemde.codemirror.on("change", function() {
+        // 优化1：光标移动时自动滚动到光标位置（避免光标超出可视区域）
+        cm.on("cursorActivity", function() {
+            const cursor = cm.getCursor();
+            // 自动滚动到光标位置，0表示无动画（1为平滑动画）
+            cm.scrollIntoView(cursor, 0);
+            
+            // 同步预览区滚动到底部（原有逻辑保留）
+            const lastLine = cm.lastLine();
+            if (lastLine - cursor.line < 10) {
+                setTimeout(scrollPreviewToBottom, 50);
+            }
+        });
+
+        // 优化2：内容变化时确保滚动条正常（兜底）
+        cm.on("change", function() {
+            // 强制刷新CodeMirror布局（避免高度计算异常）
+            cm.refresh();
+            
+            // 原有预览区逻辑
             const content = simplemde.value();
             marked.setOptions({
                 highlight: function(code, lang) {
@@ -601,15 +582,20 @@
             setTimeout(scrollPreviewToBottom, 50);
         });
 
-        // 编辑区光标位置变化时跟随滚动
-        simplemde.codemirror.on("cursorActivity", function() {
-            const lastLine = simplemde.codemirror.lastLine();
-            const cursorLine = simplemde.codemirror.getCursor().line;
-            
-            if (lastLine - cursorLine < 10) {
-                setTimeout(scrollPreviewToBottom, 50);
-            }
+        // 优化3：页面加载完成后强制初始化高度（防止首次加载异常）
+        $(document).ready(function() {
+            // 强制设置CodeMirror高度（兜底）
+            cm.setOption("height", "460px");
+            // 刷新布局
+            cm.refresh();
         });
+        // ===================== 核心修改结束 =====================
+
+        // 预览区自动跟随滚动
+        function scrollPreviewToBottom() {
+            const preview = document.getElementById('preview');
+            preview.scrollTop = preview.scrollHeight;
+        }
 
         // 全局变量
         let currentFile = { name: "", sha: "" };
@@ -732,6 +718,8 @@
                     $("#export-btn").prop("disabled", false);
                     $("#save-status").text("");
                     
+                    // 加载文件后刷新编辑器布局 + 滚动到底部
+                    cm.refresh();
                     setTimeout(scrollPreviewToBottom, 100);
                 },
                 error: function(err) {
