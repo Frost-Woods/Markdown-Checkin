@@ -17,6 +17,8 @@ const preview = document.getElementById('preview');
 
 function renderPreview() {
   preview.innerHTML = md.render(editor.value);
+  // 重新应用自定义颜色
+  applyColorSettings();
 }
 editor.addEventListener('input', () => {
   renderPreview();
@@ -36,7 +38,12 @@ function setTheme(theme) {
   const dark = theme === 'dark';
   hljsLight.disabled = dark;
   hljsDark.disabled = !dark;
-  themeToggle.textContent = dark ? '☀️' : '🌙';
+  themeToggle.textContent = dark ? '☀☀️' : '🌙🌙';
+  
+  // 主题切换后重新应用颜色设置
+  setTimeout(() => {
+    applyColorSettings();
+  }, 100);
 }
 
 setTheme(localStorage.getItem('theme') || 'light');
@@ -241,7 +248,7 @@ function deleteFile(filename) {
   // 6. 同步删除结果到本地存储（优先同步，避免后续操作覆盖）
   saveFilesToStorage();
 
-  // 7. 处理当前文件删除后的逻辑（满足“编辑区清空”的核心需求）
+  // 7. 处理当前文件删除后的逻辑（满足"编辑区清空"的核心需求）
   if (isDeleteCurrentFile) {
     // 无论是否有其他文件，都清空编辑区（你要的核心效果）
     fileSystem.currentFile = null; // 重置当前文件状态，阻断回写
@@ -365,7 +372,7 @@ function playExportSound() {
 /* 音效开关 */
 const soundToggle = document.getElementById('soundToggle');
 function updateSoundBtn() {
-  soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+  soundToggle.textContent = soundEnabled ? '🔊🔊' : '🔇🔇';
 }
 updateSoundBtn();
 
@@ -493,50 +500,57 @@ function updateStats() {
 
 /* ================= 代码高亮颜色自定义 ================= */
 
-// 定义可自定义的语法元素
-// 修改 syntaxElements 数组，替换原来的定义
+// 扩展语法元素定义，覆盖更多语言和类名
 const syntaxElements = [
-  { id: 'keyword', name: '关键字' },
-  { id: 'variable', name: '变量名' },
-  { id: 'string', name: '字符串' },
-  { id: 'number', name: '数字' },
-  { id: 'comment', name: '注释' },
-  { id: 'title.function_', name: '函数名' }, // 修改：使用正确的函数名类名
-  { id: 'class', name: '类名' },
-  { id: 'meta', name: '元数据' },
-  { id: 'built_in', name: '内置类型' },
-  { id: 'punctuation', name: '标点符号' },
-  { id: 'operator', name: '运算符' }
+  { id: 'keyword', name: '关键字', languages: ['c', 'cpp', 'java', 'javascript', 'python', 'go', 'rust'] },
+  { id: 'built_in', name: '内置函数/类型', languages: ['c', 'cpp', 'python', 'javascript'] },
+  { id: 'type', name: '类型声明', languages: ['c', 'cpp', 'java', 'go', 'rust'] },
+  { id: 'function', name: '函数名', languages: ['c', 'cpp', 'javascript', 'python'] },
+  { id: 'title.function_', name: '函数标题', languages: ['c', 'cpp', 'python'] },
+  { id: 'variable', name: '变量名', languages: ['c', 'cpp', 'java', 'javascript', 'python'] },
+  { id: 'string', name: '字符串', languages: ['c', 'cpp', 'java', 'javascript', 'python'] },
+  { id: 'number', name: '数字', languages: ['c', 'cpp', 'java', 'javascript', 'python'] },
+  { id: 'comment', name: '注释', languages: ['c', 'cpp', 'java', 'javascript', 'python'] },
+  { id: 'class', name: '类名', languages: ['cpp', 'java', 'python', 'javascript'] },
+  { id: 'meta', name: '元数据', languages: ['python', 'javascript'] },
+  { id: 'punctuation', name: '标点符号', languages: ['c', 'cpp', 'java', 'javascript', 'python'] },
+  { id: 'operator', name: '运算符', languages: ['c', 'cpp', 'java', 'javascript', 'python'] },
+  { id: 'params', name: '函数参数', languages: ['c', 'cpp', 'javascript', 'python'] }
 ];
 
-// 默认颜色配置
-// 修改默认颜色配置，替换原来的 defaultColors 对象
+// 增强的默认颜色配置
 const defaultColors = {
   light: {
     keyword: '#6ABFFA',
+    built_in: '#88C8F8',
+    type: '#6ABFFA',
+    function: '#F8D878',
+    'title.function_': '#F8D878',
     variable: '#C898FA',
     string: '#F0A898',
     number: '#88E888',
     comment: '#78C878',
-    'title.function_': '#F8D878', // 修改：函数名颜色
     class: '#98D8F8',
     meta: '#FF9878',
-    built_in: '#88C8F8',
-    punctuation: '#B8B8D8', // 修改：标点符号颜色
-    operator: '#D8D8F8'      // 修改：运算符颜色
+    punctuation: '#B8B8D8',
+    operator: '#D8D8F8',
+    params: '#C898FA'
   },
   dark: {
     keyword: '#61AFEF',
+    built_in: '#88C8F8',
+    type: '#61AFEF',
+    function: '#E5E58A',
+    'title.function_': '#E5E58A',
     variable: '#A7D8FF',
     string: '#E59866',
     number: '#98C379',
     comment: '#72B865',
-    'title.function_': '#E5E58A', // 修改：函数名颜色
     class: '#56D9B9',
     meta: '#FF9878',
-    built_in: '#88C8F8',
-    punctuation: '#B8B8D8', // 修改：标点符号颜色
-    operator: '#D8D8F8'      // 修改：运算符颜色
+    punctuation: '#B8B8D8',
+    operator: '#D8D8F8',
+    params: '#A7D8FF'
   }
 };
 
@@ -557,6 +571,7 @@ function initColorSettings() {
       <div class="color-input-group">
         <input type="color" id="${element.id}Color" value="${currentColor}">
         <input type="text" id="${element.id}ColorHex" value="${currentColor}">
+        <span class="language-tags">${element.languages.join(', ')}</span>
       </div>
     `;
     
@@ -621,8 +636,7 @@ function saveColorSetting(elementId, color) {
   localStorage.setItem('customHighlightColors', JSON.stringify(userColors));
 }
 
-// 应用颜色设置
-// 修改 applyColorSettings 函数中的CSS生成部分
+// 增强的颜色应用函数
 function applyColorSettings() {
   const userColors = getUserColors();
   const theme = document.documentElement.getAttribute('data-theme');
@@ -646,14 +660,36 @@ function applyColorSettings() {
       ? element.id.replace('.', '.')  // 保持原样，如 .hljs-title.function_
       : element.id;
     
+    // 为每个语法元素生成CSS规则
     css += `[data-theme="${theme}"] .hljs-${className} { color: ${color} !important; }\n`;
+    
+    // 针对特定语言的额外规则
+    if (element.id === 'function') {
+      // 为C语言的main函数添加特殊规则
+      css += `[data-theme="${theme}"] .hljs-function.hljs-title { color: ${color} !important; }\n`;
+    }
+    
+    if (element.id === 'title.function_') {
+      // 确保函数标题被正确着色
+      css += `[data-theme="${theme}"] .hljs-title.hljs-function { color: ${color} !important; }\n`;
+    }
   });
+  
+  // 添加通用规则确保标点符号和运算符被着色
+  css += `
+    [data-theme="${theme}"] .hljs-punctuation { color: ${userColors[theme]?.punctuation || defaultColors[theme].punctuation} !important; }
+    [data-theme="${theme}"] .hljs-operator { color: ${userColors[theme]?.operator || defaultColors[theme].operator} !important; }
+    [data-theme="${theme}"] .hljs-keyword { color: ${userColors[theme]?.keyword || defaultColors[theme].keyword} !important; }
+    [data-theme="${theme}"] .hljs-built_in { color: ${userColors[theme]?.built_in || defaultColors[theme].built_in} !important; }
+  `;
   
   style.textContent = css;
   document.head.appendChild(style);
   
-  // 重新渲染预览以应用新样式
-  renderPreview();
+  // 强制重新高亮所有代码块
+  document.querySelectorAll('pre code').forEach((block) => {
+    hljs.highlightElement(block);
+  });
 }
 
 /* 初始化 */
@@ -661,8 +697,8 @@ function init() {
   updateStats();
   renderPreview();
   initFileSystem();
-  initColorSettings(); // 添加颜色设置初始化
-  applyColorSettings(); // 应用颜色设置
+  initColorSettings();
+  applyColorSettings();
 }
 
 init();
