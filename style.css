@@ -436,4 +436,116 @@ input {
 
 [data-theme="dark"] .hljs-title.function_ {
   color: #E5E58A !important;
+
+}
+/* 原有的所有CSS代码保持不变... */
+
+/* 确保标点符号和运算符有基础样式 */
+[data-theme="light"] .hljs-punctuation {
+  color: #B8B8D8 !important;
+}
+
+[data-theme="light"] .hljs-operator {
+  color: #D8D8F8 !important;
+}
+
+[data-theme="light"] .hljs-title.function_ {
+  color: #F8D878 !important;
+}
+
+[data-theme="dark"] .hljs-punctuation {
+  color: #B8B8D8 !important;
+}
+
+[data-theme="dark"] .hljs-operator {
+  color: #D8D8F8 !important;
+}
+
+[data-theme="dark"] .hljs-title.function_ {
+  color: #E5E58A !important;
+}
+
+/* ===== 新增的CSS样式从这里开始 ===== */
+
+/* 新增语言标签样式 */
+.language-tags {
+  font-size: 10px;
+  color: #888;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+/* 增强代码块样式 */
+#preview pre.hljs {
+  position: relative;
+  margin: 12px 0;
+  padding: 16px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.8) !important;
+  overflow-x: auto;
+}
+
+#preview pre.hljs::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ccc;
+  padding: 2px 8px;
+  font-size: 10px;
+  border-bottom-left-radius: 4px;
+}
+
+/* 确保所有语法元素都能被正确着色 */
+.hljs-keyword,
+.hljs-built_in,
+.hljs-type,
+.hljs-function,
+.hljs-title.function_,
+.hljs-variable,
+.hljs-string,
+.hljs-number,
+.hljs-comment,
+.hljs-class,
+.hljs-meta,
+.hljs-punctuation,
+.hljs-operator,
+.hljs-params {
+  transition: color 0.3s ease;
+}
+
+/* 增强颜色设置面板 */
+.color-setting {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.color-setting label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.color-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-input-group input[type="color"] {
+  width: 40px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.color-input-group input[type="text"] {
+  flex: 1;
+  min-width: 80px;
 }
