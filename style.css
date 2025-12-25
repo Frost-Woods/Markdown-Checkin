@@ -438,35 +438,6 @@ input {
   color: #E5E58A !important;
 
 }
-/* 原有的所有CSS代码保持不变... */
-
-/* 确保标点符号和运算符有基础样式 */
-[data-theme="light"] .hljs-punctuation {
-  color: #B8B8D8 !important;
-}
-
-[data-theme="light"] .hljs-operator {
-  color: #D8D8F8 !important;
-}
-
-[data-theme="light"] .hljs-title.function_ {
-  color: #F8D878 !important;
-}
-
-[data-theme="dark"] .hljs-punctuation {
-  color: #B8B8D8 !important;
-}
-
-[data-theme="dark"] .hljs-operator {
-  color: #D8D8F8 !important;
-}
-
-[data-theme="dark"] .hljs-title.function_ {
-  color: #E5E58A !important;
-}
-
-/* ===== 新增的CSS样式从这里开始 ===== */
-
 /* 新增语言标签样式 */
 .language-tags {
   font-size: 10px;
