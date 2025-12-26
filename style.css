@@ -325,14 +325,6 @@ input {
 [data-theme="light"] .hljs-class {
   color: #98D8F8; /* 亮浅青，类型层 */
 }
-/* 标点符号（括号/分号/大括号等） */
-[data-theme="light"] .hljs-punctuation {
-  color: #B8B8D8; /* 浅紫灰，标点层，黑底不融且不抢戏 */
-}
-/* 运算符（=/+/*/等） */
-[data-theme="light"] .hljs-operator {
-  color: #D8D8F8; /* 亮紫灰，运算符层，略亮于标点 */
-}
 
 /* 针对 dark mode 的调整（与浅色系同风格的柔雾深色主题，视觉统一） */
 [data-theme="dark"] .hljs {
