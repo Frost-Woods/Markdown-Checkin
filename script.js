@@ -503,9 +503,7 @@ const syntaxElements = [
   { id: 'function', name: '函数名' },
   { id: 'class', name: '类名' },
   { id: 'meta', name: '元数据' },
-  { id: 'built_in', name: '内置类型' },
-  { id: 'punctuation', name: '标点符号' },
-  { id: 'operator', name: '运算符' }
+  { id: 'built_in', name: '内置类型' }
 ];
 
 // 默认颜色配置
@@ -656,11 +654,21 @@ function applyColorSettings() {
     }
     // 为变量名生成多个可能的CSS选择器
     else if (element.id === 'variable') {
-      // 同时覆盖多种可能的变量名类名
+      // 通用变量名选择器（覆盖所有主流语言）
+      // 1. 基础变量类（所有语言通用）
       css += `[data-theme="${theme}"] .hljs-variable { color: ${color} !important; }\n`;
+      // 2. 语言内置变量（如 JS 的 this、Python 的 self）
       css += `[data-theme="${theme}"] .hljs-variable.language_ { color: ${color} !important; }\n`;
+      // 3. 通用标识符/变量名（Python、JS、Java 等核心）
+      css += `[data-theme="${theme}"] .hljs-name { color: ${color} !important; }\n`;
+      // 4. 变量声明（如 JS 的 let/const、Python 的变量赋值）
+      css += `[data-theme="${theme}"] .hljs-var { color: ${color} !important; }\n`;
+      // 5. 标识符（Java、C#、Go 等语言的变量）
+      css += `[data-theme="${theme}"] .hljs-identifier { color: ${color} !important; }\n`;
+      // 6. 函数参数（属于变量范畴，可选保留）
       css += `[data-theme="${theme}"] .hljs-params { color: ${color} !important; }\n`;
-      css += `[data-theme="${theme}"] .hljs-attr { color: ${color} !important; }\n`;
+      // 7. 部分语言的符号变量（如 Ruby、Swift）
+      css += `[data-theme="${theme}"] .hljs-symbol { color: ${color} !important; }\n`;
     }
     // 为类名生成多个可能的CSS选择器
     else if (element.id === 'class') {
