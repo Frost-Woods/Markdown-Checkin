@@ -107,5 +107,38 @@
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 
 <script src="script.js"></script>
+
+<!-- 悬浮按钮 -->
+<button id="statusBarFloatBtn" class="status-bar-float-btn">ℹ️</button>
+
+<!-- 底边栏 -->
+<div id="statusBar" class="status-bar collapsed">
+  <div class="status-bar-content">
+    <div class="status-item">
+      <span class="label">编码格式：</span>
+      <span id="encodingInfo">UTF-8</span>
+    </div>
+    <div class="status-item">
+      <span class="label">总字符数：</span>
+      <span id="totalChars">0</span>
+    </div>
+    <div class="status-item">
+      <span class="label">纯文本字数：</span>
+      <span id="textWords">0</span>
+    </div>
+    <div class="status-item">
+      <span class="label">行数：</span>
+      <span id="lineCount">0</span>
+    </div>
+    <div class="status-item">
+      <span class="label">Markdown 预览：</span>
+      <span id="previewStatus">已同步</span>
+    </div>
+    <div class="status-item status-actions">
+      <button id="toggleStatusBar">━</button>
+      <button id="toggleFixedMode">📌 固定</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
