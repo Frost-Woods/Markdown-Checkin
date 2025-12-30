@@ -1,0 +1,856 @@
+/* ================= Markdown + 高亮 ================= */
+
+const md = window.markdownit({
+  html: true,
+  linkify: true,
+  typographer: true,
+  highlight: (str, lang) => {
+    if (lang && hljs.getLanguage(lang)) {
+      return `<pre class="hljs"><code>${hljs.highlight(str, { language: lang }).value}</code></pre>`;
+    }
+    return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`;
+  }
+});
+
+const editor = document.getElementById('editor');
+const preview = document.getElementById('preview');
+
+function renderPreview() {
+  preview.innerHTML = md.render(editor.value);
+}
+editor.addEventListener('input', () => {
+  renderPreview();
+  playEditSound();
+});
+
+/* ================= 深色模式 ================= */
+
+const themeToggle = document.getElementById('themeToggle');
+const hljsLight = document.getElementById('hljs-light');
+const hljsDark = document.getElementById('hljs-dark');
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+
+  const dark = theme === 'dark';
+  hljsLight.disabled = dark;
+  hljsDark.disabled = !dark;
+  themeToggle.textContent = dark ? '☀️' : '🌙';
+}
+
+setTheme(localStorage.getItem('theme') || 'dark');
+
+themeToggle.onclick = () => {
+  setTheme(
+    document.documentElement.getAttribute('data-theme') === 'dark'
+      ? 'light' : 'dark'
+  );
+};
+
+/* ================= 左侧侧边栏控制 ================= */
+
+const sidebar = document.getElementById('sidebar');
+const toggleSidebar = document.getElementById('toggleSidebar');
+
+function setSidebar(collapsed) {
+  sidebar.classList.toggle('collapsed', collapsed);
+  localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+}
+
+const savedSidebarState = localStorage.getItem('sidebarCollapsed');
+// 默认折叠左侧侧边栏
+if (savedSidebarState === null) {
+  setSidebar(true);
+} else {
+  setSidebar(savedSidebarState === '1');
+}
+
+toggleSidebar.onclick = () => {
+  setSidebar(!sidebar.classList.contains('collapsed'));
+};
+
+/* ================= 右侧侧边栏及文件管理 ================= */
+
+// 文件系统状态
+const fileSystem = {
+  files: {},           // 存储所有文件内容 { filename: content }
+  currentFile: null,   // 当前激活的文件名
+  FILE_STORAGE_KEY: 'markdownStudioFiles' // localStorage存储键名
+};
+
+// DOM元素
+const sidebarRight = document.getElementById('sidebarRight');
+const toggleRightSidebarBtn = document.getElementById('toggleRightSidebarBtn');
+const toggleRightSidebar = document.getElementById('toggleRightSidebar');
+const fileList = document.getElementById('fileList');
+
+const saveFileBtn = document.getElementById('saveFileBtn');
+
+const deleteFileBtn = document.getElementById('deleteFileBtn');
+// 修复：删除当前文件按钮的事件绑定（显式传递当前文件参数，兜底校验）
+deleteFileBtn.addEventListener('click', () => {
+  // 兜底：若currentFile为空，提示用户
+  if (!fileSystem.currentFile) {
+    alert('暂无当前编辑的文件，无法删除！');
+    return;
+  }
+  // 显式调用删除当前文件
+  deleteFile(fileSystem.currentFile);
+});
+
+
+const fileNameInput = document.getElementById('fileNameInput');
+const importFileBtn = document.getElementById('importFileBtn');
+
+// 初始化文件系统
+function initFileSystem() {
+  const savedFiles = localStorage.getItem(fileSystem.FILE_STORAGE_KEY);
+  if (savedFiles) {
+    fileSystem.files = JSON.parse(savedFiles);
+    // 加载第一个文件
+    const fileNames = Object.keys(fileSystem.files);
+    if (fileNames.length > 0) {
+      openFile(fileNames[0]);
+    }
+  }
+  renderFileList();
+}
+
+// 渲染文件列表
+function renderFileList() {
+  fileList.innerHTML = '';
+  const fileNames = Object.keys(fileSystem.files);
+  
+  if (fileNames.length === 0) {
+    fileList.innerHTML = '<div style="padding: 12px; text-align: center; color: #888;">无文件</div>';
+    return;
+  }
+  
+  fileNames.forEach(filename => {
+    const fileItem = document.createElement('div');
+    fileItem.className = `file-item ${fileSystem.currentFile === filename ? 'active' : ''}`;
+    fileItem.innerHTML = `
+      <span>${filename}.md</span>
+      <span class="delete-icon" data-file="${filename}">×</span>
+    `;
+    
+    // 点击文件切换
+    fileItem.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('delete-icon')) {
+        openFile(filename);
+      }
+    });
+    
+    fileList.appendChild(fileItem);
+  });
+  
+  // 添加删除文件事件监听
+  document.querySelectorAll('.delete-icon').forEach(icon => {
+    icon.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const filename = e.target.getAttribute('data-file');
+      deleteFile(filename);
+    });
+  });
+}
+
+// 打开文件
+function openFile(filename) {
+  if (!fileSystem.files[filename]) return;
+  
+  // 保存当前文件内容
+  if (fileSystem.currentFile) {
+    fileSystem.files[fileSystem.currentFile] = editor.value;
+    saveFilesToStorage();
+  }
+  
+  // 加载新文件内容
+  fileSystem.currentFile = filename;
+  editor.value = fileSystem.files[filename];
+  fileNameInput.value = filename;
+  renderPreview();
+  renderFileList();
+}
+
+// 新建文件
+function newFile() {
+  let defaultName = '新文件';
+  let count = 1;
+  
+  // 确保文件名唯一
+  while (fileSystem.files[defaultName]) {
+    defaultName = `新文件${count}`;
+    count++;
+  }
+  
+  // 创建新文件
+  fileSystem.files[defaultName] = '';
+  saveFilesToStorage();
+  openFile(defaultName);
+}
+
+// 保存文件
+function saveFile() {
+  const newFilename = fileNameInput.value.trim();
+  if (!newFilename) {
+    alert('请输入文件名');
+    return;
+  }
+  
+  // 如果文件名已更改且存在
+  if (newFilename !== fileSystem.currentFile && fileSystem.files[newFilename]) {
+    if (!confirm(`文件 "${newFilename}" 已存在，是否覆盖？`)) {
+      return;
+    }
+  }
+  
+  // 如果是重命名
+  if (fileSystem.currentFile && newFilename !== fileSystem.currentFile) {
+    delete fileSystem.files[fileSystem.currentFile];
+  }
+  
+  // 保存文件内容
+  fileSystem.files[newFilename] = editor.value;
+  saveFilesToStorage();
+  openFile(newFilename);
+}
+
+// 删除文件
+function deleteFile(filename) {
+  // 1. 补全参数：未传文件名则删除当前文件
+  if (!filename) filename = fileSystem.currentFile;
+  
+  // 2. 校验文件存在性：避免删除不存在的文件
+  if (!filename || !fileSystem.files[filename]) {
+    alert(`文件 "${filename || '未知'}.md" 不存在或已被删除`);
+    return;
+  }
+
+  // 3. 确认删除操作
+  if (!confirm(`确定要删除 "${filename}.md" 吗？`)) {
+    return;
+  }
+
+  // 4. 标记是否为当前文件（核心：提前缓存状态）
+  const isDeleteCurrentFile = fileSystem.currentFile === filename;
+
+  // 5. 核心操作：删除文件（先删内存中的文件）
+  delete fileSystem.files[filename];
+
+  // 6. 同步删除结果到本地存储（优先同步，避免后续操作覆盖）
+  saveFilesToStorage();
+
+  // 7. 处理当前文件删除后的逻辑（满足“编辑区清空”的核心需求）
+  if (isDeleteCurrentFile) {
+    // 无论是否有其他文件，都清空编辑区（你要的核心效果）
+    fileSystem.currentFile = null; // 重置当前文件状态，阻断回写
+    editor.value = '';            // 清空编辑器内容
+    fileNameInput.value = '';     // 清空文件名输入框
+    renderPreview();              // 刷新预览区（清空预览）
+  }
+
+  // 8. 刷新文件列表UI，确保删除后的列表同步
+  renderFileList();
+
+  // 9. 友好反馈：告知删除成功
+  alert(`文件 "${filename}.md" 已成功删除`);
+}
+
+// 导入文件
+function importFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.md';
+  
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      // 获取不带扩展名的文件名
+      const filename = file.name.replace(/\.md$/i, '');
+      let finalName = filename;
+      let count = 1;
+      
+      // 确保文件名唯一
+      while (fileSystem.files[finalName]) {
+        finalName = `${filename}${count}`;
+        count++;
+      }
+      
+      // 保存导入的文件
+      fileSystem.files[finalName] = event.target.result;
+      saveFilesToStorage();
+      openFile(finalName);
+      alert(`已导入文件: ${finalName}.md`);
+    };
+    reader.readAsText(file);
+  };
+  
+  input.click();
+}
+
+// 保存文件到localStorage
+function saveFilesToStorage() {
+  localStorage.setItem(fileSystem.FILE_STORAGE_KEY, JSON.stringify(fileSystem.files));
+}
+
+// 右侧侧边栏控制
+function setRightSidebar(collapsed) {
+  sidebarRight.classList.toggle('collapsed', collapsed);
+  localStorage.setItem('rightSidebarCollapsed', collapsed ? '1' : '0');
+}
+
+// 右侧侧边栏事件监听
+
+saveFileBtn.addEventListener('click', saveFile);
+deleteFileBtn.addEventListener('click', deleteFile);
+importFileBtn.addEventListener('click', importFile);
+
+toggleRightSidebarBtn.addEventListener('click', () => {
+  setRightSidebar(!sidebarRight.classList.contains('collapsed'));
+});
+
+toggleRightSidebar.addEventListener('click', () => {
+  setRightSidebar(true);
+});
+
+// 初始化右侧侧边栏状态（默认折叠）
+const rightSidebarSaved = localStorage.getItem('rightSidebarCollapsed');
+if (rightSidebarSaved === null) {
+  setRightSidebar(true); // 首次加载默认折叠
+} else {
+  setRightSidebar(rightSidebarSaved === '1');
+}
+
+/* ================= 音效系统 ================= */
+
+const editAudio = new Audio('audio/edit.mp3');
+const exportAudio = new Audio('audio/export.mp3');
+
+editAudio.volume = 0.4;
+exportAudio.volume = 0.6;
+
+let audioUnlocked = false;
+let soundEnabled = localStorage.getItem('soundEnabled') !== '0';
+let editPlaying = false;
+
+document.addEventListener('click', () => {
+  if (!audioUnlocked) {
+    editAudio.play().then(() => {
+      editAudio.pause();
+      editAudio.currentTime = 0;
+      audioUnlocked = true;
+    }).catch(() => {});
+  }
+}, { once: true });
+
+function playEditSound() {
+  if (!audioUnlocked || !soundEnabled || editPlaying) return;
+  editPlaying = true;
+  editAudio.currentTime = 0;
+  editAudio.play().finally(() => {
+    editAudio.onended = () => editPlaying = false;
+  });
+}
+
+function playExportSound() {
+  if (!audioUnlocked || !soundEnabled) return;
+  exportAudio.currentTime = 0;
+  exportAudio.play().catch(() => {});
+}
+
+/* 音效开关 */
+const soundToggle = document.getElementById('soundToggle');
+function updateSoundBtn() {
+  soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+}
+updateSoundBtn();
+
+soundToggle.onclick = () => {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('soundEnabled', soundEnabled ? '1' : '0');
+  updateSoundBtn();
+};
+
+/* ================= 导出功能 ================= */
+
+const exportBtn = document.getElementById('exportBtn');
+const exportMdBtn = document.getElementById('exportMdBtn'); // 导出MD按钮
+const exportPdfBtn = document.getElementById('exportPdfBtn');
+
+// 导出HTML
+exportBtn.onclick = () => {
+  playExportSound();
+  const blob = new Blob([preview.innerHTML], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'export.html';
+  a.click();
+};
+
+// 新增：导出MD文件
+exportMdBtn.onclick = () => {
+  playExportSound();
+  // 使用当前文件名（如果有），否则用默认名
+  const fileName = fileSystem.currentFile ? `${fileSystem.currentFile}.md` : 'export.md';
+  const blob = new Blob([editor.value], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  // 释放URL对象
+  URL.revokeObjectURL(a.href);
+};
+
+// 导出PDF
+exportPdfBtn.onclick = () => {
+  playExportSound();
+  html2pdf().from(preview).save();
+};
+
+/* ================= GitHub 上传 + 指标 ================= */
+
+const KEY = 'uploadStats';
+const uploadGithubBtn = document.getElementById('uploadGithubBtn');
+const repoOwner = document.getElementById('repoOwner');
+const repoName = document.getElementById('repoName');
+const filePath = document.getElementById('filePath');
+const tokenInput = document.getElementById('tokenInput');
+const todayCount = document.getElementById('todayCount');
+const uploadChart = document.getElementById('uploadChart');
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function recordUploadSuccess() {
+  const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+  const t = today();
+  s[t] = (s[t] || 0) + 1;
+  localStorage.setItem(KEY, JSON.stringify(s));
+  updateStats();
+}
+
+uploadGithubBtn.onclick = async () => {
+  const owner = repoOwner.value.trim();
+  const repo = repoName.value.trim();
+  const path = filePath.value.trim();
+  const token = tokenInput.value.trim();
+  if (!owner || !repo || !path || !token) return alert('信息不完整');
+
+  const content = btoa(unescape(encodeURIComponent(editor.value)));
+  const api = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+  let sha = null;
+  const r = await fetch(api, { headers: { Authorization: `token ${token}` } });
+  if (r.ok) sha = (await r.json()).sha;
+
+  const res = await fetch(api, {
+    method: 'PUT',
+    headers: {
+      Authorization: `token ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ message: 'Update Markdown', content, sha })
+  });
+
+  if (!res.ok) return alert('上传失败');
+  recordUploadSuccess();
+  alert('✅ 已上传到 GitHub');
+};
+
+/* ================= 上传统计 ================= */
+
+let chart;
+
+function updateStats() {
+  const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+  todayCount.textContent = `今日上传：${s[today()] || 0} 次`;
+
+  const labels = [];
+  const data = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const k = d.toISOString().slice(0, 10);
+    labels.push(k.slice(5));
+    data.push(s[k] || 0);
+  }
+
+  if (!chart) {
+    chart = new Chart(uploadChart, {
+      type: 'bar',
+      data: { labels, datasets: [{ data }] }
+    });
+  } else {
+    chart.data.datasets[0].data = data;
+    chart.update();
+  }
+}
+
+/* ================= 代码高亮颜色自定义 ================= */
+
+// 定义可自定义的语法元素
+const syntaxElements = [
+  { id: 'keyword', name: '关键字' },
+  { id: 'variable', name: '变量名' },
+  { id: 'string', name: '字符串' },
+  { id: 'number', name: '数字' },
+  { id: 'comment', name: '注释' },
+  { id: 'function', name: '函数名' },
+  { id: 'class', name: '类名' },
+  { id: 'meta', name: '元数据' },
+  { id: 'built_in', name: '内置类型' }
+];
+
+// 默认颜色配置
+const defaultColors = {
+  light: {
+    keyword: '#6ABFFA',
+    variable: '#C898FA',
+    string: '#F0A898',
+    number: '#88E888',
+    comment: '#78C878',
+    function: '#F8D878',
+    class: '#98D8F8',
+    meta: '#FF9878',
+    built_in: '#88C8F8',
+    punctuation: '#B8B8D8',
+    operator: '#D8D8F8'
+  },
+  dark: {
+    keyword: '#61AFEF',
+    variable: '#A7D8FF',
+    string: '#E59866',
+    number: '#98C379',
+    comment: '#72B865',
+    function: '#E5E58A',
+    class: '#56D9B9',
+    meta: '#FF9878',
+    built_in: '#88C8F8',
+    punctuation: '#B8B8D8',
+    operator: '#D8D8F8'
+  }
+};
+
+// 初始化颜色设置面板
+function initColorSettings() {
+  const colorSettings = document.getElementById('colorSettings');
+  const userColors = getUserColors();
+  
+  syntaxElements.forEach(element => {
+    const theme = document.documentElement.getAttribute('data-theme');
+    const defaultColor = defaultColors[theme][element.id];
+    const currentColor = userColors[theme][element.id] || defaultColor;
+    
+    const settingDiv = document.createElement('div');
+    settingDiv.className = 'color-setting';
+    settingDiv.innerHTML = `
+      <label for="${element.id}Color">${element.name}</label>
+      <div class="color-input-group">
+        <input type="color" id="${element.id}Color" value="${currentColor}">
+        <input type="text" id="${element.id}ColorHex" value="${currentColor}">
+      </div>
+    `;
+    
+    colorSettings.appendChild(settingDiv);
+    
+    // 绑定颜色选择事件
+    const colorInput = document.getElementById(`${element.id}Color`);
+    const hexInput = document.getElementById(`${element.id}ColorHex`);
+    
+    colorInput.addEventListener('input', () => {
+      hexInput.value = colorInput.value;
+      saveColorSetting(element.id, colorInput.value);
+      applyColorSettings();
+    });
+    
+    hexInput.addEventListener('input', () => {
+      if (/^#[0-9A-F]{6}$/i.test(hexInput.value)) {
+        colorInput.value = hexInput.value;
+        saveColorSetting(element.id, hexInput.value);
+        applyColorSettings();
+      }
+    });
+  });
+  
+  // 绑定重置按钮事件
+  document.getElementById('resetColorsBtn').addEventListener('click', () => {
+    if (confirm('确定要重置为默认颜色吗？')) {
+      localStorage.removeItem('customHighlightColors');
+      // 清空现有设置
+      document.getElementById('colorSettings').innerHTML = '';
+      initColorSettings();
+      applyColorSettings();
+    }
+  });
+  
+  // 主题切换时更新颜色设置
+  themeToggle.addEventListener('click', () => {
+    setTimeout(() => {
+      // 等待主题切换完成
+      document.getElementById('colorSettings').innerHTML = '';
+      initColorSettings();
+    }, 0);
+  });
+}
+
+// 获取用户颜色设置
+function getUserColors() {
+  const saved = localStorage.getItem('customHighlightColors');
+  return saved ? JSON.parse(saved) : { light: {}, dark: {} };
+}
+
+// 保存颜色设置
+function saveColorSetting(elementId, color) {
+  const theme = document.documentElement.getAttribute('data-theme');
+  const userColors = getUserColors();
+  
+  if (!userColors[theme]) {
+    userColors[theme] = {};
+  }
+  
+  userColors[theme][elementId] = color;
+  localStorage.setItem('customHighlightColors', JSON.stringify(userColors));
+}
+
+// 应用颜色设置
+// 应用颜色设置
+function applyColorSettings() {
+  const userColors = getUserColors();
+  const theme = document.documentElement.getAttribute('data-theme');
+  
+  // 移除已存在的自定义样式
+  const existingStyle = document.getElementById('customHighlightStyles');
+  if (existingStyle) {
+    existingStyle.remove();
+  }
+  
+  // 创建新的样式元素
+  const style = document.createElement('style');
+  style.id = 'customHighlightStyles';
+  
+  let css = '';
+  syntaxElements.forEach(element => {
+    const color = userColors[theme][element.id] || defaultColors[theme][element.id];
+    
+    // 为函数名生成多个可能的CSS选择器，确保覆盖所有语言
+    if (element.id === 'function') {
+      // 同时覆盖多种可能的函数名类名
+      css += `[data-theme="${theme}"] .hljs-function { color: ${color} !important; }\n`;
+      css += `[data-theme="${theme}"] .hljs-title.function_ { color: ${color} !important; }\n`;
+      css += `[data-theme="${theme}"] .hljs-title { color: ${color} !important; }\n`;
+      css += `[data-theme="${theme}"] .hljs-name { color: ${color} !important; }\n`;
+    }
+    // 为标点符号生成多个可能的CSS选择器
+    else if (element.id === 'punctuation') {
+      // 同时覆盖多种可能的标点符号类名
+      css += `[data-theme="${theme}"] .hljs-punctuation { color: ${color} !important; }\n`;
+      css += `[data-theme="${theme}"] .hljs-operator { color: ${color} !important; }\n`;
+      css += `[data-theme="${theme}"] .hljs-symbol { color: ${color} !important; }\n`;
+    }
+    // 为变量名生成多个可能的CSS选择器
+    else if (element.id === 'variable') {
+      // 通用变量名选择器（覆盖所有主流语言）
+      // 1. 基础变量类（所有语言通用）
+      css += `[data-theme="${theme}"] .hljs-variable { color: ${color} !important; }\n`;
+      // 2. 语言内置变量（如 JS 的 this、Python 的 self）
+      css += `[data-theme="${theme}"] .hljs-variable.language_ { color: ${color} !important; }\n`;
+      // 3. 通用标识符/变量名（Python、JS、Java 等核心）
+      css += `[data-theme="${theme}"] .hljs-name { color: ${color} !important; }\n`;
+      // 4. 变量声明（如 JS 的 let/const、Python 的变量赋值）
+      css += `[data-theme="${theme}"] .hljs-var { color: ${color} !important; }\n`;
+      // 5. 标识符（Java、C#、Go 等语言的变量）
+      css += `[data-theme="${theme}"] .hljs-identifier { color: ${color} !important; }\n`;
+      // 6. 函数参数（属于变量范畴，可选保留）
+      css += `[data-theme="${theme}"] .hljs-params { color: ${color} !important; }\n`;
+      // 7. 部分语言的符号变量（如 Ruby、Swift）
+      css += `[data-theme="${theme}"] .hljs-symbol { color: ${color} !important; }\n`;
+    }
+    // 为类名生成多个可能的CSS选择器
+    else if (element.id === 'class') {
+      // 同时覆盖多种可能的类名类名
+      css += `[data-theme="${theme}"] .hljs-class { color: ${color} !important; }\n`;
+      css += `[data-theme="${theme}"] .hljs-title.class_ { color: ${color} !important; }\n`;
+      css += `[data-theme="${theme}"] .hljs-type { color: ${color} !important; }\n`;
+      css += `[data-theme="${theme}"] .hljs-built_in { color: ${color} !important; }\n`;
+      css += `[data-theme="${theme}"] .hljs-selector-class { color: ${color} !important; }\n`;
+    }
+    // 为其他元素生成CSS选择器
+    else {
+      css += `[data-theme="${theme}"] .hljs-${element.id} { color: ${color} !important; }\n`;
+    }
+  });
+  
+  style.textContent = css;
+  document.head.appendChild(style);
+  
+  // 重新渲染预览以应用新样式
+  renderPreview();
+}
+
+/* ================= 底边栏/状态栏功能 ================= */
+
+// 获取DOM元素
+const statusBar = document.getElementById('statusBar');
+const statusBarFloatBtn = document.getElementById('statusBarFloatBtn');
+const toggleStatusBarBtn = document.getElementById('toggleStatusBar');
+const toggleFixedModeBtn = document.getElementById('toggleFixedMode');
+const totalCharsEl = document.getElementById('totalChars');
+const textWordsEl = document.getElementById('textWords');
+const lineCountEl = document.getElementById('lineCount');
+const previewStatusEl = document.getElementById('previewStatus');
+
+// 状态管理
+const statusBarState = {
+  isFixed: true, // 默认固定模式
+  isCollapsed: true, // 默认折叠
+  updateTimer: null
+};
+
+// 初始化状态栏状态
+function initStatusBar() {
+  // 从本地存储恢复状态
+  const savedState = localStorage.getItem('statusBarState');
+  if (savedState) {
+    Object.assign(statusBarState, JSON.parse(savedState));
+  }
+  
+  // 设置初始样式
+  statusBar.classList.toggle('collapsed', statusBarState.isCollapsed);
+  statusBar.classList.toggle('fixed', statusBarState.isFixed);
+  statusBar.classList.toggle('floating', !statusBarState.isFixed);
+  
+  // 更新按钮文本
+  updateModeButtonText();
+  
+  // 首次计算统计信息
+  updateStatusStats();
+}
+
+// 更新状态栏统计信息
+function updateStatusStats() {
+  const content = editor.value;
+  
+  // 1. 总字符数（包括空格、换行）
+  const totalChars = content.length;
+  
+  // 2. 纯文本字数（去除Markdown标记、空格、换行后的中文字符+英文字数）
+  // 先移除Markdown标记
+  let plainText = content
+    .replace(/[#*`~>_\[\](){}|!@$%^&+=\\]/g, '') // 移除Markdown符号
+    .replace(/<[^>]*>/g, '') // 移除HTML标签
+    .replace(/\s+/g, ' '); // 合并多个空白符为单个空格
+  
+  // 统计中文字符和英文单词
+  const chineseChars = (plainText.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const englishWords = (plainText.replace(/[\u4e00-\u9fa5]/g, ' ').match(/\b\w+\b/g) || []).length;
+  const textWords = chineseChars + englishWords;
+  
+  // 3. 行数
+  const lineCount = content.split('\n').length;
+  
+  // 更新DOM显示
+  totalCharsEl.textContent = totalChars;
+  textWordsEl.textContent = textWords;
+  lineCountEl.textContent = lineCount;
+  
+  // 更新预览状态
+  previewStatusEl.textContent = '已同步';
+  
+  // 3秒后重置预览状态
+  clearTimeout(statusBarState.updateTimer);
+  statusBarState.updateTimer = setTimeout(() => {
+    previewStatusEl.textContent = '已同步';
+  }, 3000);
+}
+
+// 切换状态栏收放
+function toggleStatusBar() {
+  statusBarState.isCollapsed = !statusBarState.isCollapsed;
+  statusBar.classList.toggle('collapsed', statusBarState.isCollapsed);
+  
+  // 保存状态到本地存储
+  saveStatusBarState();
+  
+  // 更新悬浮按钮显示
+  if (statusBarState.isCollapsed) {
+    statusBarFloatBtn.style.display = 'flex';
+  } else {
+    statusBarFloatBtn.style.display = 'none';
+  }
+}
+
+// 切换固定/悬浮模式
+function toggleFixedMode() {
+  statusBarState.isFixed = !statusBarState.isFixed;
+  statusBar.classList.toggle('fixed', statusBarState.isFixed);
+  statusBar.classList.toggle('floating', !statusBarState.isFixed);
+  
+  // 更新按钮文本
+  updateModeButtonText();
+  
+  // 保存状态
+  saveStatusBarState();
+}
+
+// 更新模式按钮文本
+function updateModeButtonText() {
+  toggleFixedModeBtn.textContent = statusBarState.isFixed ? '🗕 悬浮' : '📌 固定';
+}
+
+// 保存状态栏状态到本地存储
+function saveStatusBarState() {
+  localStorage.setItem('statusBarState', JSON.stringify({
+    isFixed: statusBarState.isFixed,
+    isCollapsed: statusBarState.isCollapsed
+  }));
+}
+
+// 绑定事件监听
+function bindStatusBarEvents() {
+  // 悬浮按钮点击 - 展开状态栏
+  statusBarFloatBtn.addEventListener('click', () => {
+    statusBarState.isCollapsed = false;
+    statusBar.classList.remove('collapsed');
+    statusBarFloatBtn.style.display = 'none';
+    saveStatusBarState();
+  });
+  
+  // 收放按钮点击
+  toggleStatusBarBtn.addEventListener('click', toggleStatusBar);
+  
+  // 模式切换按钮点击
+  toggleFixedModeBtn.addEventListener('click', toggleFixedMode);
+  
+  // 编辑器输入时更新统计信息
+  editor.addEventListener('input', () => {
+    previewStatusEl.textContent = '更新中...';
+    updateStatusStats();
+  });
+  
+  // 窗口大小变化时重新计算
+  window.addEventListener('resize', updateStatusStats);
+}
+
+
+// 初始化状态栏
+initStatusBar();
+bindStatusBarEvents();
+
+/* 初始化 */
+function init() {
+  updateStats();
+  renderPreview();
+  initFileSystem();
+  initColorSettings(); // 添加颜色设置初始化
+  applyColorSettings(); // 应用颜色设置
+  initStatusBar(); // 添加这行
+  bindStatusBarEvents(); // 添加这行
+
+}
+
+init();
