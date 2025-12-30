@@ -692,6 +692,155 @@ function applyColorSettings() {
   renderPreview();
 }
 
+/* ================= 底边栏/状态栏功能 ================= */
+
+// 获取DOM元素
+const statusBar = document.getElementById('statusBar');
+const statusBarFloatBtn = document.getElementById('statusBarFloatBtn');
+const toggleStatusBarBtn = document.getElementById('toggleStatusBar');
+const toggleFixedModeBtn = document.getElementById('toggleFixedMode');
+const totalCharsEl = document.getElementById('totalChars');
+const textWordsEl = document.getElementById('textWords');
+const lineCountEl = document.getElementById('lineCount');
+const previewStatusEl = document.getElementById('previewStatus');
+
+// 状态管理
+const statusBarState = {
+  isFixed: true, // 默认固定模式
+  isCollapsed: true, // 默认折叠
+  updateTimer: null
+};
+
+// 初始化状态栏状态
+function initStatusBar() {
+  // 从本地存储恢复状态
+  const savedState = localStorage.getItem('statusBarState');
+  if (savedState) {
+    Object.assign(statusBarState, JSON.parse(savedState));
+  }
+  
+  // 设置初始样式
+  statusBar.classList.toggle('collapsed', statusBarState.isCollapsed);
+  statusBar.classList.toggle('fixed', statusBarState.isFixed);
+  statusBar.classList.toggle('floating', !statusBarState.isFixed);
+  
+  // 更新按钮文本
+  updateModeButtonText();
+  
+  // 首次计算统计信息
+  updateStatusStats();
+}
+
+// 更新状态栏统计信息
+function updateStatusStats() {
+  const content = editor.value;
+  
+  // 1. 总字符数（包括空格、换行）
+  const totalChars = content.length;
+  
+  // 2. 纯文本字数（去除Markdown标记、空格、换行后的中文字符+英文字数）
+  // 先移除Markdown标记
+  let plainText = content
+    .replace(/[#*`~>_\[\](){}|!@$%^&+=\\]/g, '') // 移除Markdown符号
+    .replace(/<[^>]*>/g, '') // 移除HTML标签
+    .replace(/\s+/g, ' '); // 合并多个空白符为单个空格
+  
+  // 统计中文字符和英文单词
+  const chineseChars = (plainText.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const englishWords = (plainText.replace(/[\u4e00-\u9fa5]/g, ' ').match(/\b\w+\b/g) || []).length;
+  const textWords = chineseChars + englishWords;
+  
+  // 3. 行数
+  const lineCount = content.split('\n').length;
+  
+  // 更新DOM显示
+  totalCharsEl.textContent = totalChars;
+  textWordsEl.textContent = textWords;
+  lineCountEl.textContent = lineCount;
+  
+  // 更新预览状态
+  previewStatusEl.textContent = '已同步';
+  
+  // 3秒后重置预览状态
+  clearTimeout(statusBarState.updateTimer);
+  statusBarState.updateTimer = setTimeout(() => {
+    previewStatusEl.textContent = '已同步';
+  }, 3000);
+}
+
+// 切换状态栏收放
+function toggleStatusBar() {
+  statusBarState.isCollapsed = !statusBarState.isCollapsed;
+  statusBar.classList.toggle('collapsed', statusBarState.isCollapsed);
+  
+  // 保存状态到本地存储
+  saveStatusBarState();
+  
+  // 更新悬浮按钮显示
+  if (statusBarState.isCollapsed) {
+    statusBarFloatBtn.style.display = 'flex';
+  } else {
+    statusBarFloatBtn.style.display = 'none';
+  }
+}
+
+// 切换固定/悬浮模式
+function toggleFixedMode() {
+  statusBarState.isFixed = !statusBarState.isFixed;
+  statusBar.classList.toggle('fixed', statusBarState.isFixed);
+  statusBar.classList.toggle('floating', !statusBarState.isFixed);
+  
+  // 更新按钮文本
+  updateModeButtonText();
+  
+  // 保存状态
+  saveStatusBarState();
+}
+
+// 更新模式按钮文本
+function updateModeButtonText() {
+  toggleFixedModeBtn.textContent = statusBarState.isFixed ? '🗕 悬浮' : '📌 固定';
+}
+
+// 保存状态栏状态到本地存储
+function saveStatusBarState() {
+  localStorage.setItem('statusBarState', JSON.stringify({
+    isFixed: statusBarState.isFixed,
+    isCollapsed: statusBarState.isCollapsed
+  }));
+}
+
+// 绑定事件监听
+function bindStatusBarEvents() {
+  // 悬浮按钮点击 - 展开状态栏
+  statusBarFloatBtn.addEventListener('click', () => {
+    statusBarState.isCollapsed = false;
+    statusBar.classList.remove('collapsed');
+    statusBarFloatBtn.style.display = 'none';
+    saveStatusBarState();
+  });
+  
+  // 收放按钮点击
+  toggleStatusBarBtn.addEventListener('click', toggleStatusBar);
+  
+  // 模式切换按钮点击
+  toggleFixedModeBtn.addEventListener('click', toggleFixedMode);
+  
+  // 编辑器输入时更新统计信息
+  editor.addEventListener('input', () => {
+    previewStatusEl.textContent = '更新中...';
+    updateStatusStats();
+  });
+  
+  // 窗口大小变化时重新计算
+  window.addEventListener('resize', updateStatusStats);
+}
+
+
+// 初始化状态栏
+initStatusBar();
+bindStatusBarEvents();
+
 /* 初始化 */
 function init() {
   updateStats();
@@ -699,6 +848,9 @@ function init() {
   initFileSystem();
   initColorSettings(); // 添加颜色设置初始化
   applyColorSettings(); // 应用颜色设置
+  initStatusBar(); // 添加这行
+  bindStatusBarEvents(); // 添加这行
+
 }
 
 init();
