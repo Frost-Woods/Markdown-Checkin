@@ -404,3 +404,125 @@ input {
 #resetColorsBtn:hover {
   background: rgba(230, 74, 74, 1);
 }
+
+/* 悬浮按钮样式 */
+.status-bar-float-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: all 0.3s ease;
+  border: none;
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+}
+
+.status-bar-float-btn:hover {
+  background: rgba(59, 130, 246, 1);
+  transform: scale(1.05);
+}
+
+[data-theme="dark"] .status-bar-float-btn {
+  background: rgba(79, 70, 229, 0.9);
+}
+
+[data-theme="dark"] .status-bar-float-btn:hover {
+  background: rgba(79, 70, 229, 1);
+}
+
+/* 底边栏样式 */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  background: rgba(255, 255, 255, var(--topbar-opacity));
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  z-index: 999;
+  transition: height 0.3s ease, transform 0.3s ease;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .status-bar {
+  background: rgba(42, 42, 42, var(--topbar-opacity));
+}
+
+.status-bar.collapsed {
+  transform: translateY(100%);
+}
+
+.status-bar.fixed {
+  position: fixed;
+  transform: translateY(0);
+}
+
+.status-bar.floating {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.status-bar-content {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 16px;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.status-bar.floating .status-bar-content {
+  padding: 12px 16px;
+  height: auto;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.status-item .label {
+  color: #888;
+  margin-right: 4px;
+}
+
+[data-theme="dark"] .status-item .label {
+  color: #aaa;
+}
+
+.status-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.status-actions button {
+  width: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+  height: 24px;
+}
+
+/* 调整主容器高度，避免被底边栏遮挡 */
+.container {
+  height: calc(100vh - 52px - 36px);
+}
+
+.status-bar.collapsed ~ .container {
+  height: calc(100vh - 52px);
+}
