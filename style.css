@@ -3,7 +3,6 @@
   --panel: #ffffff;
   --border: #ddd;
   --text: #222;
-  /* 新增半透明变量 */
   --panel-opacity: 0.85;
   --topbar-opacity: 0.9;
 }
@@ -13,7 +12,6 @@
   --panel: #2a2a2a;
   --border: #444;
   --text: #eee;
-  /* 深色模式保持一致的透明度 */
   --panel-opacity: 0.85;
   --topbar-opacity: 0.9;
 }
@@ -23,12 +21,12 @@ body {
   font-family: system-ui, -apple-system;
   background: var(--bg);
   color: var(--text);
-  /* 全局壁纸设置 */
   background-image: url('audio/wallpaper.png');
-  background-size: cover; /* 覆盖整个界面 */
-  background-repeat: no-repeat; /* 不重复 */
-  background-position: center center; /* 居中 */
-  background-attachment: fixed; /* 固定背景不滚动 */
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
 /* 顶部栏 - 半透明 */
@@ -39,8 +37,9 @@ body {
   padding: 0 12px;
   background: rgba(255, 255, 255, var(--topbar-opacity));
   border-bottom: 1px solid var(--border);
-  /* 深色模式适配 */
-  backdrop-filter: blur(8px); /* 毛玻璃效果增强观感 */
+  backdrop-filter: blur(8px);
+  position: relative;
+  z-index: 100;
 }
 
 /* 深色模式顶部栏背景修正 */
@@ -64,6 +63,13 @@ body {
 /* 布局 */
 .container {
   display: flex;
+  height: calc(100vh - 52px - 36px);
+  position: relative;
+  z-index: 10;
+  transition: height 0.3s ease;
+}
+
+.status-bar.collapsed ~ .container {
   height: calc(100vh - 52px);
 }
 
@@ -168,9 +174,17 @@ body {
   background-color: rgba(0,0,0,0.05);
 }
 
+[data-theme="dark"] .file-item:hover {
+  background-color: rgba(255,255,255,0.05);
+}
+
 .file-item.active {
   background-color: rgba(59, 130, 246, 0.1);
   font-weight: bold;
+}
+
+[data-theme="dark"] .file-item.active {
+  background-color: rgba(59, 130, 246, 0.2);
 }
 
 .file-item .delete-icon {
@@ -189,6 +203,7 @@ body {
   padding: 12px;
   display: flex;
   flex-direction: column;
+  min-width: 400px;
 }
 
 .editor-container {
@@ -196,6 +211,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+  min-height: 0; /* 修复flex容器高度计算问题 */
 }
 
 /* 编辑器 - 半透明 */
@@ -206,6 +222,8 @@ body {
   background: rgba(255, 255, 255, var(--panel-opacity));
   color: var(--text);
   backdrop-filter: blur(8px);
+  resize: none;
+  min-height: 0;
 }
 
 [data-theme="dark"] #editor {
@@ -227,14 +245,14 @@ body {
 
 /* 预览区代码块样式优化 */
 #preview pre.hljs {
-  margin: 12px 0; /* 上下外边距 */
-  padding: 16px; /* 内边距增大 */
-  border-radius: 4px; /* 轻微圆角 */
-  background: rgba(0, 0, 0, 0.8) !important; /* 代码块加深保证可读性 */
+  margin: 12px 0;
+  padding: 16px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.8) !important;
 }
 
 #preview pre.hljs code {
-  line-height: 1.5; /* 优化行高 */
+  line-height: 1.5;
 }
 
 /* 两侧边栏都打开时的布局调整 */
@@ -243,7 +261,7 @@ body {
   min-width: 400px;
 }
 
-/* 按钮样式增强（保证半透明背景下的可读性） */
+/* 按钮样式增强 */
 button {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--border);
@@ -266,6 +284,16 @@ button:hover {
   background: rgba(50, 50, 50, 0.95);
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(200, 200, 200, 0.9);
+}
+
+[data-theme="dark"] button:disabled {
+  background: rgba(60, 60, 60, 0.9);
+}
+
 /* 输入框半透明 */
 input {
   background: rgba(255, 255, 255, 0.85);
@@ -279,88 +307,88 @@ input {
   background: rgba(42, 42, 42, 0.9);
 }
 
+/* 代码高亮样式 */
 [data-theme="light"] .hljs {
   background-color: #ffffff;
   padding: 12px;
   border-radius: 4px;
-  color: #ffffff; /* Light+ 基础文字色（纯黑，高对比） */
+  color: #222;
 }
 
 [data-theme="light"] .hljs-meta {
-  color: #FF9878; /* 亮珊瑚橙，黑底高对比，预处理指令醒目 */
+  color: #FF9878;
   font-weight: 500;
 }
-/* 关键字（int/if/else/for 等） */
+
 [data-theme="light"] .hljs-keyword {
-  color: #6ABFFA; /* 亮青蓝，核心语法关键字 */
+  color: #6ABFFA;
   font-weight: 500;
 }
-/* 内置类型（int/char/float 等） */
+
 [data-theme="light"] .hljs-built_in {
-  color: #88C8F8; /* 浅青蓝，与普通关键字区分，仍属语法层 */
+  color: #88C8F8;
 }
-/* 函数名（main/自定义函数等） */
+
 [data-theme="light"] .hljs-title.function_ {
-  color: #F8D878; /* 亮浅金黄，函数名核心层级 */
+  color: #F8D878;
 }
-/* 变量名 */
+
 [data-theme="light"] .hljs-variable {
-  color: #C898FA; /* 亮浅紫，数据层 */
+  color: #C898FA;
 }
-/* 字符串 */
+
 [data-theme="light"] .hljs-string {
-  color: #F0A898; /* 亮三文鱼橙，文本层 */
+  color: #F0A898;
 }
-/* 数字 */
+
 [data-theme="light"] .hljs-number {
-  color: #88E888; /* 亮薄荷绿，数值层 */
+  color: #88E888;
 }
-/* 注释 */
+
 [data-theme="light"] .hljs-comment {
-  color: #78C878; /* 亮橄榄绿，弱化但清晰 */
+  color: #78C878;
   font-style: italic;
   opacity: 0.9;
 }
-/* 类名 */
+
 [data-theme="light"] .hljs-class {
-  color: #98D8F8; /* 亮浅青，类型层 */
+  color: #98D8F8;
 }
 
-/* 针对 dark mode 的调整（与浅色系同风格的柔雾深色主题，视觉统一） */
+/* 修复深色模式代码块背景色 */
 [data-theme="dark"] .hljs {
-  background-color: #f1e9e9; /* 深灰紫底（与浅色系同色系，协调统一） */
+  background-color: #282c34 !important; /* 正确的深色背景 */
   padding: 12px;
   border-radius: 4px;
-  color: #e0e0f0; /* 浅灰紫基础文字色（高对比度+柔和感） */
+  color: #e0e0f0;
 }
 
-/* VSCode Dark+ 优化配色（核心：高对比度、高鲜艳度，无灰暗色） */
 [data-theme="dark"] .hljs-keyword {
-  color: #61AFEF; /* 亮蓝色（鲜艳不刺眼，替代原灰暗的 #569CD6） */
+  color: #61AFEF;
 }
 
 [data-theme="dark"] .hljs-variable {
-  color: #A7D8FF; /* 浅青蓝（更亮更通透，替代原偏灰的 #9CDCFE） */
+  color: #A7D8FF;
 }
 
 [data-theme="dark"] .hljs-string {
-  color: #E59866; /* 三文鱼橙（更鲜艳，替代原偏暗的 #CE9178） */
+  color: #E59866;
 }
 
 [data-theme="dark"] .hljs-number {
-  color: #98C379; /* 薄荷绿（更亮更清新，替代原偏灰的 #B5CEA8） */
+  color: #98C379;
 }
 
 [data-theme="dark"] .hljs-comment {
-  color: #72B865; /* 橄榄绿（更亮更通透，替代原偏暗的 #6A9955） */
+  color: #72B865;
 }
 
 [data-theme="dark"] .hljs-function {
-  color: #E5E58A; /* 浅金黄（更亮更醒目，替代原偏灰的 #DCDCAA） */
+  color: #E5E58A;
 }
 
 [data-theme="dark"] .hljs-class {
-  color: #56D9B9; /* 青柠绿（更鲜艳，替代原偏暗的 #4EC9B0） */
+  color: #56D9B9;
 }
 
 /* 颜色设置面板样式 */
@@ -518,11 +546,13 @@ input {
   height: 24px;
 }
 
-/* 调整主容器高度，避免被底边栏遮挡 */
-.container {
-  height: calc(100vh - 52px - 36px);
-}
-
-.status-bar.collapsed ~ .container {
-  height: calc(100vh - 52px);
+/* 响应式调整 */
+@media (max-width: 1024px) {
+  .editor-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .main {
+    min-width: 0;
+  }
 }
