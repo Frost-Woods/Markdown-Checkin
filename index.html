@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html data-theme="dark">
-<html lang="zh-CN">
+<html data-theme="dark" lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <title>Markdown Studio</title>
@@ -18,7 +17,7 @@
   <link rel="stylesheet" href="style.css" />
 
   <!-- 引入 highlight.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 
 </head>
 
@@ -32,7 +31,7 @@
     <button id="soundToggle">🔊</button>
     <button id="themeToggle">🌙</button>
     <button id="exportBtn">导出 HTML</button>
-    <button id="exportMdBtn">导出 MD</button> <!-- 新增导出MD按钮 -->
+    <button id="exportMdBtn">导出 MD</button>
     <button id="exportPdfBtn">导出 PDF</button>
   </div>
 </header>
@@ -74,7 +73,9 @@
       <textarea id="editor" placeholder="在这里编写 Markdown..."></textarea>
       <div id="preview"></div>
     </div>
-    <input type="file" id="fileInput" accept=".md">
+    <!-- 绑定文件导入事件 -->
+    <input type="file" id="fileInput" accept=".md" style="margin-top: 10px;">
+    <button id="newFileBtn" style="margin-top: 10px;">📄 新建文件</button>
   </main>
 
   <!-- 右侧文件管理侧边栏 -->
