@@ -20,6 +20,7 @@
 - Node.js 16+
 - npm 或 yarn
 
+
 ### 安装依赖
 ```bash
 npm install # 已经完成
